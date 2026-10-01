@@ -1,0 +1,107 @@
+name: Protected Windows Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: SemVer package version
+        required: true
+        default: 0.1.0
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  signed-windows-release:
+    runs-on: windows-latest
+    environment: release-signing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $version = '${{ inputs.version }}'
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            $version = '${{ github.ref_name }}'.TrimStart('v')
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Version must be three-part SemVer for MSI: $version"
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+      - name: Build unsigned inputs
+        shell: pwsh
+        run: .\scripts\Build-WindowsPackages.ps1 -RuntimeIdentifier all -Version '${{ steps.version.outputs.value }}' -SkipPackageTests
+      - name: Materialize protected signing certificate
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_BASE64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERTIFICATE_BASE64)) {
+            throw 'The protected release-signing environment must provide WINDOWS_SIGNING_CERTIFICATE_BASE64.'
+          }
+          [IO.File]::WriteAllBytes(
+            "$env:RUNNER_TEMP\PromptSaver-signing.pfx",
+            [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERTIFICATE_BASE64))
+      - name: Sign published executables
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          .\scripts\Sign-WindowsArtifacts.ps1 `
+            -Path .\artifacts\publish `
+            -CertificatePath "$env:RUNNER_TEMP\PromptSaver-signing.pfx" `
+            -CertificatePassword $env:WINDOWS_SIGNING_CERTIFICATE_PASSWORD
+      - name: Rebuild installers from signed inputs
+        shell: pwsh
+        run: .\scripts\Build-WindowsPackages.ps1 -RuntimeIdentifier all -Version '${{ steps.version.outputs.value }}' -SkipPublish -SkipPackageTests
+      - name: Sign installers
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          .\scripts\Sign-WindowsArtifacts.ps1 `
+            -Path .\artifacts\installers `
+            -CertificatePath "$env:RUNNER_TEMP\PromptSaver-signing.pfx" `
+            -CertificatePassword $env:WINDOWS_SIGNING_CERTIFICATE_PASSWORD
+          .\scripts\New-WindowsPackageManifest.ps1 `
+            -ArtifactsDirectory .\artifacts `
+            -Version '${{ steps.version.outputs.value }}'
+      - name: Verify signed packages
+        shell: pwsh
+        run: |
+          $env:PROMPTSAVER_ARTIFACTS = "$PWD\artifacts"
+          $env:PROMPTSAVER_PACKAGE_VERSION = '${{ steps.version.outputs.value }}'
+          dotnet test --project .\tests\PromptSaver.Package.Tests\PromptSaver.Package.Tests.csproj -c Release -p:TreatWarningsAsErrors=true
+      - name: Upload signed release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromptSaver-${{ steps.version.outputs.value }}-signed-windows
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            artifacts/installers/**/*.msi
+            artifacts/manifests/*
+      - name: Publish GitHub release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view '${{ github.ref_name }}' *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create '${{ github.ref_name }}' --verify-tag --title 'Prompt Saver ${{ steps.version.outputs.value }}' --generate-notes
+          }
+          $assets = @(
+            Get-ChildItem .\artifacts\installers -Filter *.msi -File -Recurse
+            Get-ChildItem .\artifacts\manifests -File
+          ) | ForEach-Object FullName
+          gh release upload '${{ github.ref_name }}' $assets --clobber

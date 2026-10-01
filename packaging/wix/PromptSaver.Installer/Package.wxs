@@ -1,0 +1,47 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Prompt Saver"
+    Manufacturer="Prompt Saver Contributors"
+    Version="$(var.ProductVersion)"
+    ProductCode="$(var.ProductCode)"
+    UpgradeCode="$(var.UpgradeCode)"
+    Scope="perMachine"
+    InstallerVersion="500"
+    Compressed="yes">
+    <SummaryInformation
+      Description="Prompt Saver $(var.InstallerPlatform) installer"
+      Manufacturer="Prompt Saver Contributors"
+      Keywords="Prompt Saver;Windows;$(var.InstallerPlatform)" />
+    <MediaTemplate EmbedCab="yes" />
+    <MajorUpgrade
+      AllowSameVersionUpgrades="no"
+      DowngradeErrorMessage="A newer version of Prompt Saver is already installed."
+      Schedule="afterInstallInitialize" />
+    <Upgrade Id="$(var.OppositeArchitectureCode)">
+      <UpgradeVersion
+        Minimum="0.0.0"
+        IncludeMinimum="yes"
+        Maximum="255.255.65535"
+        IncludeMaximum="yes"
+        OnlyDetect="yes"
+        Property="OTHERARCHITECTUREFOUND" />
+    </Upgrade>
+    <Property Id="ARPCONTACT" Value="https://github.com/hoopdad/prompt-saver/issues" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/hoopdad/prompt-saver/issues" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/hoopdad/prompt-saver" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="PROMPTSAVER_ARCHITECTURE" Value="$(var.InstallerPlatform)" />
+    <Property Id="PROMPTSAVER_FAMILY_ID" Value="C97D46A3-944B-4BD9-A88E-2C49ECA831F7" />
+    <Launch
+      Condition="Installed OR NOT OTHERARCHITECTUREFOUND"
+      Message="A different architecture of Prompt Saver is installed. Uninstall it before installing this package. Your data in %LOCALAPPDATA%\PromptSaver will be retained." />
+    <Feature Id="MainFeature" Title="Prompt Saver" Level="1">
+      <ComponentGroupRef Id="PublishedFiles" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
+      <ComponentRef Id="InstallRegistrationComponent" />
+      <Feature Id="DesktopShortcutFeature" Title="Desktop shortcut" Level="2" AllowAbsent="yes">
+        <ComponentRef Id="DesktopShortcutComponent" />
+      </Feature>
+    </Feature>
+  </Package>
+</Wix>

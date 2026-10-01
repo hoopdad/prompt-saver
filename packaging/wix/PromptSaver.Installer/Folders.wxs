@@ -1,0 +1,45 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Prompt Saver" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Prompt Saver" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="StartMenuShortcutComponent" Guid="2B3F3774-12AE-5DA0-8419-3ECFA83D717C" Bitness="always64">
+        <Shortcut
+          Id="StartMenuShortcut"
+          Name="Prompt Saver"
+          Description="Capture and organize reusable AI prompts"
+          Target="[INSTALLFOLDER]PromptSaver.Desktop.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKLM" Key="Software\PromptSaver\Installer" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcutComponent" Guid="62A6DB2E-B60C-591E-A91C-8BF26E37DE49" Bitness="always64">
+        <Shortcut
+          Id="DesktopShortcut"
+          Name="Prompt Saver"
+          Description="Capture and organize reusable AI prompts"
+          Target="[INSTALLFOLDER]PromptSaver.Desktop.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKLM" Key="Software\PromptSaver\Installer" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="InstallRegistrationComponent" Guid="E31A8E1D-2C35-5197-984D-2B7AA469CD88" Bitness="always64">
+        <RegistryValue Root="HKLM" Key="Software\PromptSaver\Installer" Name="Architecture" Type="string" Value="$(var.InstallerPlatform)" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\PromptSaver\Installer" Name="InstallDirectory" Type="string" Value="[INSTALLFOLDER]" />
+        <RegistryValue Root="HKLM" Key="Software\PromptSaver\Installer" Name="Version" Type="string" Value="$(var.ProductVersion)" />
+      </Component>
+    </DirectoryRef>
+  </Fragment>
+</Wix>

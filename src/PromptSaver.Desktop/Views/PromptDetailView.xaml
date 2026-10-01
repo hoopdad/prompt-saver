@@ -1,0 +1,143 @@
+<UserControl x:Class="PromptSaver.Desktop.Views.PromptDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:System.Windows.Automation;assembly=PresentationCore">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="PromptDetailHeading"
+                       Grid.Row="0"
+                       Style="{StaticResource PageHeadingStyle}"
+                       Text="Prompt detail"
+                       Focusable="True"
+                       automation:AutomationProperties.AutomationId="PromptDetailHeading" />
+
+            <TextBlock Grid.Row="1" Margin="3,0" Text="Title" />
+            <TextBox Grid.Row="2"
+                     Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                     automation:AutomationProperties.AutomationId="PromptTitleEditor"
+                     automation:AutomationProperties.Name="Prompt title" />
+
+            <TextBox x:Name="PromptDetailEditor"
+                     Grid.Row="3"
+                     MinHeight="160"
+                     AcceptsReturn="True"
+                     AcceptsTab="False"
+                     TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
+                     automation:AutomationProperties.AutomationId="PromptDetailEditor"
+                     automation:AutomationProperties.Name="Prompt text" />
+
+            <Border x:Name="PromptDetailMetadata"
+                    Grid.Row="4"
+                    Margin="3,8"
+                    Padding="10"
+                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                    BorderThickness="1"
+                    Focusable="True"
+                    automation:AutomationProperties.AutomationId="PromptDetailMetadata">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionHeadingStyle}" Text="Metadata" />
+                    <TextBlock Text="{Binding MetadataSummary}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,5" FontWeight="SemiBold" Text="{Binding IntentFeedback}" TextWrapping="Wrap" />
+                    <ComboBox ItemsSource="{Binding Prompt.IntentCandidates}"
+                              SelectedItem="{Binding SelectedIntentCandidate}"
+                              DisplayMemberPath="CurrentDisplayName"
+                              automation:AutomationProperties.Name="Intent review candidates"
+                              automation:AutomationProperties.AutomationId="IntentCandidates" />
+                    <WrapPanel>
+                        <Button Content="Keep current intent"
+                                Command="{Binding KeepCurrentIntentCommand}"
+                                automation:AutomationProperties.AutomationId="KeepCurrentIntentButton" />
+                        <Button Content="Use selected intent"
+                                Command="{Binding ApplyIntentReviewCommand}"
+                                automation:AutomationProperties.AutomationId="DetailReviewIntentButton" />
+                        <Button Content="Review later"
+                                Command="{Binding ReviewLaterCommand}"
+                                automation:AutomationProperties.AutomationId="ReviewIntentLaterButton" />
+                        <Button Content="Edit metadata"
+                                Command="{Binding EditMetadataCommand}"
+                                automation:AutomationProperties.AutomationId="EditMetadataButton" />
+                    </WrapPanel>
+                    <StackPanel Visibility="{Binding IsMetadataEditing, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Margin="0,6,0,0" Text="Skills (comma-separated)" />
+                        <TextBox Text="{Binding SkillsText, UpdateSourceTrigger=PropertyChanged}"
+                                 automation:AutomationProperties.AutomationId="SkillsEditor" />
+                        <TextBlock Margin="0,6,0,0" Text="Entities (one per line: name | type)" />
+                        <TextBox MinHeight="64"
+                                 AcceptsReturn="True"
+                                 Text="{Binding EntitiesText, UpdateSourceTrigger=PropertyChanged}"
+                                 automation:AutomationProperties.AutomationId="EntitiesEditor" />
+                        <WrapPanel HorizontalAlignment="Right">
+                            <Button Content="Cancel metadata edit"
+                                    Command="{Binding CancelMetadataCommand}"
+                                    automation:AutomationProperties.AutomationId="CancelMetadataButton" />
+                            <Button Content="Save metadata"
+                                    Command="{Binding SaveMetadataCommand}"
+                                    automation:AutomationProperties.AutomationId="SaveMetadataButton" />
+                        </WrapPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <WrapPanel Grid.Row="5" HorizontalAlignment="Right">
+                <Button Content="Copy prompt"
+                        Command="{Binding CopyCommand}"
+                        automation:AutomationProperties.AutomationId="DetailCopyButton" />
+                <Button Content="Duplicate"
+                        Command="{Binding DuplicateCommand}"
+                        automation:AutomationProperties.AutomationId="DuplicatePromptButton" />
+                <Button Content="Delete..."
+                        Command="{Binding RequestDeleteCommand}"
+                        automation:AutomationProperties.AutomationId="RequestDeleteButton" />
+                <Button MinHeight="40"
+                        Content="Save changes"
+                        Command="{Binding SaveCommand}"
+                        automation:AutomationProperties.AutomationId="SavePromptChangesButton" />
+            </WrapPanel>
+
+            <StackPanel Grid.Row="6">
+                <Border Margin="3"
+                        Padding="10"
+                        BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                        BorderThickness="1"
+                        Visibility="{Binding DeleteConfirmationOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        automation:AutomationProperties.AutomationId="DeleteConfirmation">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="Permanently delete this prompt?" />
+                        <TextBlock Margin="0,4"
+                                   Text="The prompt record and its private metadata will be deleted. Shared intents remain."
+                                   TextWrapping="Wrap" />
+                        <WrapPanel HorizontalAlignment="Right">
+                            <Button Content="Cancel"
+                                    IsDefault="True"
+                                    IsCancel="True"
+                                    Command="{Binding CancelDeleteCommand}"
+                                    automation:AutomationProperties.AutomationId="CancelDeleteButton" />
+                            <Button Content="Delete prompt"
+                                    Command="{Binding ConfirmDeleteCommand}"
+                                    automation:AutomationProperties.AutomationId="ConfirmDeleteButton" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+                <TextBlock x:Name="PromptDetailStatus"
+                           MinHeight="32"
+                           Margin="3"
+                           Text="{Binding StatusMessage}"
+                           TextWrapping="Wrap"
+                           automation:AutomationProperties.AutomationId="PromptDetailStatus"
+                           automation:AutomationProperties.LiveSetting="Polite" />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

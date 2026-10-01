@@ -1,0 +1,99 @@
+<UserControl x:Class="PromptSaver.Desktop.Views.CaptureView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:automation="clr-namespace:System.Windows.Automation;assembly=PresentationCore"
+             MinWidth="300"
+             MinHeight="240">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Style="{StaticResource PageHeadingStyle}"
+                   Text="Prompt"
+                   automation:AutomationProperties.AutomationId="CaptureHeading" />
+
+        <TextBox x:Name="PromptEditor"
+                 Grid.Row="1"
+                 MinHeight="150"
+                 AcceptsReturn="True"
+                 AcceptsTab="False"
+                 SpellCheck.IsEnabled="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 Text="{Binding Body, UpdateSourceTrigger=PropertyChanged}"
+                 automation:AutomationProperties.AutomationId="PromptEditor"
+                 automation:AutomationProperties.Name="Prompt"
+                 automation:AutomationProperties.HelpText="Enter or paste the prompt to save. Ctrl+Enter saves and Ctrl+Shift+C copies." />
+
+        <DockPanel Grid.Row="2" MinHeight="34" Margin="3,4">
+            <TextBlock DockPanel.Dock="Right"
+                       Margin="12,0,0,0"
+                       VerticalAlignment="Center"
+                       Text="{Binding SizeText}"
+                       Visibility="{Binding ShowSize, Converter={StaticResource BooleanToVisibilityConverter}}"
+                       automation:AutomationProperties.Name="Prompt size" />
+            <TextBlock VerticalAlignment="Center"
+                       Text="{Binding StatusMessage}"
+                       TextWrapping="Wrap"
+                       automation:AutomationProperties.AutomationId="CaptureStatus"
+                       automation:AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+
+        <Border Grid.Row="3"
+                Margin="3,2,3,6"
+                Padding="8"
+                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                BorderThickness="1"
+                Visibility="{Binding HasIntentFeedback, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock FontWeight="SemiBold" Text="Intent" />
+                <TextBlock Text="{Binding IntentFeedback}" TextWrapping="Wrap" />
+                <Button HorizontalAlignment="Left"
+                        Content="Review intent"
+                        Command="{Binding ReviewIntentCommand}"
+                        automation:AutomationProperties.AutomationId="ReviewIntentButton"
+                        automation:AutomationProperties.HelpText="Review a provisional, low-confidence, or Unsorted intent assignment." />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="4" Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Content="Metadata"
+                        Command="{Binding ReviewMetadataCommand}"
+                        automation:AutomationProperties.AutomationId="CaptureMetadataButton"
+                        automation:AutomationProperties.Name="Review metadata" />
+                <Button Content="Try draft backup again"
+                        Command="{Binding RetryBackupCommand}"
+                        Visibility="{Binding CanRetryDraftBackup, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        automation:AutomationProperties.AutomationId="RetryDraftButton" />
+            </StackPanel>
+            <WrapPanel x:Name="CaptureActions"
+                       Grid.Column="1"
+                       HorizontalAlignment="Right"
+                       automation:AutomationProperties.AutomationId="CaptureActions">
+                <Button Content="New prompt"
+                        Command="{Binding NewPromptCommand}"
+                        automation:AutomationProperties.AutomationId="NewPromptAction" />
+                <Button Content="Copy"
+                        Command="{Binding CopyCommand}"
+                        automation:AutomationProperties.AutomationId="CopyPromptButton"
+                        automation:AutomationProperties.Name="Copy current prompt text" />
+                <Button MinHeight="40"
+                        Content="{Binding PrimaryActionText}"
+                        Command="{Binding SaveCommand}"
+                        automation:AutomationProperties.AutomationId="SavePromptButton"
+                        automation:AutomationProperties.Name="Save prompt" />
+            </WrapPanel>
+        </Grid>
+    </Grid>
+</UserControl>

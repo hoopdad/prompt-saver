@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PromptSaver.Application\PromptSaver.Application.csproj" />
+    <ProjectReference Include="..\..\src\PromptSaver.Desktop\PromptSaver.Desktop.csproj" />
+    <ProjectReference Include="..\..\src\PromptSaver.Domain\PromptSaver.Domain.csproj" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,45 @@
+<Project Sdk="WixToolset.Sdk/4.0.6">
+  <PropertyGroup>
+    <InstallerPlatform Condition="'$(InstallerPlatform)' == ''">x64</InstallerPlatform>
+    <Platform>$(InstallerPlatform)</Platform>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">0.1.0</ProductVersion>
+    <RuntimeIdentifier Condition="'$(InstallerPlatform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(InstallerPlatform)' == 'arm64'">win-arm64</RuntimeIdentifier>
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\..\artifacts\publish\$(RuntimeIdentifier)</PublishDir>
+    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\..'))</RepositoryRoot>
+    <GeneratedSource>$(MSBuildThisFileDirectory)obj\$(Configuration)\$(InstallerPlatform)\Files.wxs</GeneratedSource>
+    <OutputName>PromptSaver-$(ProductVersion)-win-$([System.String]::Copy('$(InstallerPlatform)').ToLowerInvariant())</OutputName>
+    <OutputType>Package</OutputType>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <SuppressValidation>false</SuppressValidation>
+    <InstallerPlatformId Condition="'$(InstallerPlatform)' == 'x64'">x64</InstallerPlatformId>
+    <InstallerPlatformId Condition="'$(InstallerPlatform)' == 'arm64'">arm64</InstallerPlatformId>
+    <ProductCode Condition="'$(ProductCode)' == '' and '$(InstallerPlatform)' == 'x64'">CCFEAC7D-87A7-5E24-9DA1-EA854237BC9E</ProductCode>
+    <ProductCode Condition="'$(ProductCode)' == '' and '$(InstallerPlatform)' == 'arm64'">5EF9A290-E3DF-5E1E-A281-41923D190190</ProductCode>
+    <UpgradeCode Condition="'$(InstallerPlatform)' == 'x64'">7990DD6A-9342-55AE-A605-83028F67A455</UpgradeCode>
+    <UpgradeCode Condition="'$(InstallerPlatform)' == 'arm64'">93D630EE-729C-5A12-80A5-EDAE1E74DDEA</UpgradeCode>
+    <OppositeArchitectureCode Condition="'$(InstallerPlatform)' == 'x64'">93D630EE-729C-5A12-80A5-EDAE1E74DDEA</OppositeArchitectureCode>
+    <OppositeArchitectureCode Condition="'$(InstallerPlatform)' == 'arm64'">7990DD6A-9342-55AE-A605-83028F67A455</OppositeArchitectureCode>
+    <DefineConstants>
+      ProductVersion=$(ProductVersion);
+      ProductCode=$(ProductCode);
+      UpgradeCode=$(UpgradeCode);
+      OppositeArchitectureCode=$(OppositeArchitectureCode);
+      PublishDir=$([System.IO.Path]::GetFullPath('$(PublishDir)'));
+      RepositoryRoot=$(RepositoryRoot)
+    </DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(GeneratedSource)" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="ValidateInstallerInputs" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(InstallerPlatform)' != 'x64' and '$(InstallerPlatform)' != 'arm64'"
+           Text="InstallerPlatform must be x64 or arm64." />
+    <Error Condition="!Exists('$(PublishDir)\PromptSaver.Desktop.exe')"
+           Text="PublishDir does not contain PromptSaver.Desktop.exe: $(PublishDir)" />
+    <Exec Command="pwsh -NoLogo -NoProfile -File &quot;$(RepositoryRoot)\scripts\Verify-PublishArchitecture.ps1&quot; -RuntimeIdentifier &quot;$(RuntimeIdentifier)&quot; -PublishDirectory &quot;$(PublishDir)&quot;" />
+    <Exec Command="pwsh -NoLogo -NoProfile -File &quot;$(RepositoryRoot)\scripts\Generate-WixFiles.ps1&quot; -PublishDirectory &quot;$(PublishDir)&quot; -OutputFile &quot;$(GeneratedSource)&quot;" />
+  </Target>
+</Project>
