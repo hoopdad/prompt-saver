@@ -2,32 +2,34 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:automation="clr-namespace:System.Windows.Automation;assembly=PresentationCore">
-    <Grid Margin="16">
+    <Grid Margin="24,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Style="{StaticResource PageHeadingStyle}"
-                   Text="Settings"
-                   automation:AutomationProperties.AutomationId="SettingsHeading" />
+        <StackPanel Grid.Row="0">
+            <TextBlock Style="{StaticResource PageHeadingStyle}"
+                       Text="Settings"
+                       automation:AutomationProperties.AutomationId="SettingsHeading" />
+            <TextBlock Margin="4,-7,4,12" Style="{StaticResource MutedTextStyle}"
+                       Text="Configure optional AI metadata, recovery, and accessibility." />
+        </StackPanel>
 
         <TabControl x:Name="SettingsCategories"
                     Grid.Row="1"
-                    TabStripPlacement="Left"
+                    TabStripPlacement="Top"
                     automation:AutomationProperties.AutomationId="SettingsCategories"
                     automation:AutomationProperties.Name="Settings categories">
             <TabItem Header="General">
                 <StackPanel Margin="12">
                     <TextBlock Style="{StaticResource SectionHeadingStyle}" Text="Appearance and behavior" />
-                    <TextBlock Text="Theme" />
-                    <ComboBox ItemsSource="{Binding Themes}"
-                              SelectedItem="{Binding Theme}"
-                              automation:AutomationProperties.AutomationId="ThemePicker"
-                              automation:AutomationProperties.Name="Application theme" />
-                    <CheckBox Content="Check spelling in prompt editors" IsChecked="True" />
+                    <TextBlock Text="Use the light/dark toggle in the top menu to switch appearance at any time."
+                               TextWrapping="Wrap" />
+                    <CheckBox Content="Check spelling in prompt editors"
+                              IsChecked="True"
+                              automation:AutomationProperties.AutomationId="GeneralSpellCheck" />
                     <TextBlock Margin="3,10"
                                Text="System colors and standard controls are used so Windows contrast themes remain authoritative."
                                TextWrapping="Wrap" />
@@ -37,18 +39,30 @@
             <TabItem Header="AI metadata">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="12">
-                        <TextBlock Style="{StaticResource SectionHeadingStyle}" Text="AI metadata (optional)" />
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource SectionHeadingStyle}" Text="AI metadata (optional)" />
+                            <Button Grid.Column="1"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    VerticalAlignment="Center"
+                                    Content="Save"
+                                    Command="{Binding SaveProviderCommand}"
+                                    automation:AutomationProperties.AutomationId="SaveProviderButton" />
+                        </Grid>
                         <TextBlock Text="Local capture and search never leave this device. When enabled, at most the first 8192 UTF-8 bytes of a prompt are sent to the configured server."
                                    TextWrapping="Wrap" />
                         <CheckBox Content="Enable AI metadata"
                                   IsChecked="{Binding ProviderEnabled}"
                                   automation:AutomationProperties.AutomationId="EnableProviderCheckBox" />
                         <TextBlock Text="Server URL" />
-                        <TextBox Text="{Binding ProviderEndpoint}"
+                        <TextBox Text="{Binding ProviderEndpoint, UpdateSourceTrigger=PropertyChanged}"
                                  automation:AutomationProperties.AutomationId="ProviderEndpoint"
                                  automation:AutomationProperties.Name="Provider server URL" />
                         <TextBlock Text="Model or deployment" />
-                        <TextBox Text="{Binding ProviderModel}"
+                        <TextBox Text="{Binding ProviderModel, UpdateSourceTrigger=PropertyChanged}"
                                  automation:AutomationProperties.AutomationId="ProviderModel"
                                  automation:AutomationProperties.Name="Provider model or deployment" />
                         <TextBlock Text="API key" />
@@ -74,9 +88,6 @@
                             <Button Content="Cancel test"
                                     Command="{Binding CancelProviderTestCommand}"
                                     automation:AutomationProperties.AutomationId="CancelProviderTestButton" />
-                            <Button Content="Save configuration"
-                                    Command="{Binding SaveProviderCommand}"
-                                    automation:AutomationProperties.AutomationId="SaveProviderButton" />
                         </WrapPanel>
                     </StackPanel>
                 </ScrollViewer>
@@ -100,7 +111,7 @@
                                 automation:AutomationProperties.AutomationId="RestoreBackupButton" />
                         <Border Margin="3"
                                 Padding="10"
-                                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                                BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1"
                                 Visibility="{Binding RestoreConfirmationOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 automation:AutomationProperties.AutomationId="RestoreConfirmation">
@@ -159,7 +170,7 @@
                                 automation:AutomationProperties.AutomationId="RequestIntentMergeButton" />
                         <Border Margin="3,8,3,0"
                                 Padding="10"
-                                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                                BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1"
                                 Visibility="{Binding MergeConfirmationOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 automation:AutomationProperties.AutomationId="IntentMergeConfirmation">

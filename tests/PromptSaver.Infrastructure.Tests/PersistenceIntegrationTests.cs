@@ -119,6 +119,39 @@ public sealed class PersistenceIntegrationTests
     }
 
     [Fact]
+    public async Task ProviderConfigurationRoundTripsStronglyTypedId()
+    {
+        using TemporaryStorage storage = new();
+        StorageServices services = storage.CreateServices();
+        SqliteProviderStore store = new(services.Connections, services.Migrations);
+        ProviderConfigurationDto configuration = new(
+            new ProviderConfigurationId(
+                Guid.Parse("0199a59c-7c00-7000-8000-000000000071")),
+            ProviderKind.Ollama,
+            "Ollama",
+            new Uri("http://127.0.0.1:11434"),
+            "llama3.2:3b",
+            true,
+            false,
+            null);
+
+        AppResult<ProviderConfigurationDto> saved = await store.SaveAsync(
+            configuration,
+            TestContext.Current.CancellationToken);
+        AppResult<ProviderConfigurationDto?> loaded = await store.GetAsync(
+            configuration.Id,
+            TestContext.Current.CancellationToken);
+        AppResult<ProviderConfigurationDto?> enabled = await store.GetEnabledAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.True(saved.IsSuccess, saved.Error?.Message);
+        Assert.True(loaded.IsSuccess, loaded.Error?.Message);
+        Assert.Equal(configuration, loaded.Value);
+        Assert.True(enabled.IsSuccess, enabled.Error?.Message);
+        Assert.Equal(configuration, enabled.Value);
+    }
+
+    [Fact]
     public async Task PromptCandidatesAndSpecialCharacterSearchPersistAfterRestart()
     {
         using TemporaryStorage storage = new();

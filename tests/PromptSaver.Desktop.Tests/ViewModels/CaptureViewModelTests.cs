@@ -127,6 +127,29 @@ public sealed class CaptureViewModelTests
     }
 
     [Fact]
+    public async Task SaveReportsQueuedOllamaInference()
+    {
+        CapturePromptResult result = CreateCaptureResult(
+            IntentAssignment.Created,
+            IntentReviewState.NeedsReview,
+            null) with
+        {
+            EnrichmentQueued = true,
+        };
+        TestCaptureServices services = new()
+        {
+            CaptureResult = AppResult.Success(result),
+        };
+        CaptureViewModel viewModel = new(services) { Body = "Create a launch plan" };
+
+        await viewModel.SaveAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            "Prompt saved. Ollama metadata inference is running.",
+            viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task SaveFailureMapsTypedErrorWithoutClearingEditor()
     {
         TestCaptureServices services = new()

@@ -47,6 +47,26 @@ public sealed class LibraryViewModelTests
         Assert.Equal("Prompt permanently deleted", viewModel.StatusMessage);
     }
 
+    [Fact]
+    public async Task ViewAllClearsFiltersAndRunsUnfilteredSearch()
+    {
+        LibraryServices services = new();
+        LibraryViewModel viewModel = new(services)
+        {
+            SearchText = "filtered",
+            NeedsReviewOnly = true,
+        };
+
+        await viewModel.ViewAllCommand.ExecuteAsync();
+
+        Assert.Equal(string.Empty, viewModel.SearchText);
+        Assert.False(viewModel.NeedsReviewOnly);
+        Assert.NotNull(services.LastQuery);
+        Assert.Equal(string.Empty, services.LastQuery.Text);
+        Assert.False(services.LastQuery.NeedsReviewOnly);
+        Assert.Equal(FocusTarget.LibraryResults, viewModel.FocusRequest?.Target);
+    }
+
     private static PromptSummaryDto CreateSummary()
     {
         PromptDetailsDto details = LibraryServices.CreateDetails(
@@ -75,12 +95,17 @@ public sealed class LibraryViewModelTests
 
         public int DeleteCalls { get; private set; }
 
+        public SearchPromptsQuery? LastQuery { get; private set; }
+
         public Task<AppResult<SearchPageDto<PromptSummaryDto>>> ExecuteAsync(
             SearchPromptsQuery query,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(
+            CancellationToken cancellationToken)
+        {
+            LastQuery = query;
+            return Task.FromResult(
                 AppResult.Success(
                     new SearchPageDto<PromptSummaryDto>([], query.PageNumber, query.PageSize, 0)));
+        }
 
         Task<AppResult> ICopyPrompt.ExecuteAsync(
             CopyPromptCommand command,

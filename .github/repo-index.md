@@ -20,6 +20,12 @@
   `src/PromptSaver.Desktop/App.xaml.cs`,
   `src/PromptSaver.Desktop/Services/DesktopComposition.cs`,
   `src/PromptSaver.Desktop/Services/SystemServices.cs`
+- Modern WPF theme resources, compact top navigation, immediate light/dark
+  switching, responsive focus routing, and page composition:
+  `src/PromptSaver.Desktop/App.xaml`,
+  `src/PromptSaver.Desktop/MainWindow.xaml`,
+  `src/PromptSaver.Desktop/MainWindow.xaml.cs`,
+  `src/PromptSaver.Desktop/Views`
 - Shared domain model, value objects, and pure mutation/assignment policies:
   `src/PromptSaver.Domain/Entities`, `src/PromptSaver.Domain/ValueObjects`,
   `src/PromptSaver.Domain/Policies`
@@ -46,7 +52,7 @@
   `src/PromptSaver.Infrastructure/Storage`,
   `src/PromptSaver.Infrastructure/Drafts`
 - SQLite provider configuration/proposal work queues and multi-provider
-  enrichment dispatch:
+  enrichment dispatch, including database-key hydration for strongly typed IDs:
   `src/PromptSaver.Infrastructure/Storage/SqliteProviderStores.cs`,
   `src/PromptSaver.Infrastructure/Providers/MultiProviderEnrichmentService.cs`
 - Fast test projects: `tests/PromptSaver.Domain.Tests`,
@@ -145,6 +151,13 @@ user data root.
   `src/PromptSaver.Desktop/App.xaml.cs`,
   `src/PromptSaver.Desktop/Services/DesktopComposition.cs`,
   `src/PromptSaver.Desktop/MainWindow.xaml.cs`
+- Change the compact top navigation, page actions, shared visual language, or
+  light/dark theme:
+  `src/PromptSaver.Desktop/{App,MainWindow}.xaml`,
+  `src/PromptSaver.Desktop/MainWindow.xaml.cs`,
+  `src/PromptSaver.Desktop/ViewModels/ShellViewModel.cs`,
+  `src/PromptSaver.Desktop/Views`,
+  `tests/PromptSaver.Desktop.Tests/ViewModels/ShellViewModelTests.cs`
 - Change restart-level save/search/copy behavior or typed integration failures:
   `tests/PromptSaver.Infrastructure.Tests/ApplicationIntegrationTests.cs`
 - Change CI or publish validation: `.github/workflows/ci.yml`,
@@ -189,7 +202,12 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `5bd465f`
+- Based on commit `2f71d24`
+- Current UI/provider reliability changes considered: compact top navigation
+  with an immediate light/dark toggle, shared modern card/control resources,
+  top-profile capture/provider actions, nullable application results,
+  defensive provider errors, and SQLite hydration of provider/proposal IDs
+  from relational keys.
 - Windows packaging additions considered:
   `src/PromptSaver.Desktop/Properties/PublishProfiles`,
   `packaging/wix/PromptSaver.Installer/{Package,Folders}.wxs`,

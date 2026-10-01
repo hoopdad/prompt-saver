@@ -78,7 +78,7 @@ public sealed class AppResult<T>
     public AppError? Error { get; }
 
     internal static AppResult<T> CreateSuccess(T value) =>
-        new(true, value ?? throw new ArgumentNullException(nameof(value)), null);
+        new(true, value, null);
 
     internal static AppResult<T> CreateFailure(AppError error) =>
         new(false, default, error ?? throw new ArgumentNullException(nameof(error)));

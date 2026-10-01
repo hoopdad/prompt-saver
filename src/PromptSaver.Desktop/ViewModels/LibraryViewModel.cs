@@ -33,6 +33,7 @@ public sealed class LibraryViewModel : ViewModelBase
         _deletePrompt = Require<IDeletePrompt>(services);
         SearchCommand = new AsyncDelegateCommand(SearchAsync);
         ClearSearchCommand = new DelegateCommand(ClearSearchStage);
+        ViewAllCommand = new AsyncDelegateCommand(ViewAllAsync);
         OpenPromptCommand = new ParameterizedCommand<PromptSummaryDto>(
             prompt => OpenPromptRequested?.Invoke(
                 this,
@@ -130,6 +131,8 @@ public sealed class LibraryViewModel : ViewModelBase
 
     public DelegateCommand ClearSearchCommand { get; }
 
+    public AsyncDelegateCommand ViewAllCommand { get; }
+
     public ParameterizedCommand<PromptSummaryDto> OpenPromptCommand { get; }
 
     public AsyncParameterizedCommand<PromptSummaryDto> CopyPromptCommand { get; }
@@ -192,6 +195,15 @@ public sealed class LibraryViewModel : ViewModelBase
         {
             NeedsReviewOnly = false;
         }
+    }
+
+    private async Task ViewAllAsync()
+    {
+        SearchText = string.Empty;
+        NeedsReviewOnly = false;
+        _pageNumber = 1;
+        await SearchAsync();
+        RequestFocus(FocusTarget.LibraryResults);
     }
 
     private async Task CopyPromptAsync(PromptSummaryDto prompt)

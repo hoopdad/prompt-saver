@@ -65,6 +65,30 @@ public sealed class DeterministicIntentPolicyTests
     }
 
     [Fact]
+    public void LongRecoveredPromptCreatesBoundedIntentFromFirstSentence()
+    {
+        DeterministicMetadata metadata = DeterministicMetadataExtractor.Extract(
+            "Create skills and update an automation from my request below. " +
+            "Analyze the full request and keep processing all remaining details asynchronously.");
+
+        Assert.Equal(
+            "Create skills and update automation from request below",
+            metadata.IntentCandidate);
+        Assert.InRange(metadata.IntentCandidate!.Length, 3, 160);
+    }
+
+    [Fact]
+    public void UnpunctuatedIntentCandidateIsTruncatedAtWordBoundary()
+    {
+        DeterministicMetadata metadata = DeterministicMetadataExtractor.Extract(
+            $"Create {string.Join(' ', Enumerable.Repeat("workflow", 50))}");
+
+        Assert.NotNull(metadata.IntentCandidate);
+        Assert.InRange(metadata.IntentCandidate.Length, 3, 160);
+        Assert.False(metadata.IntentCandidate.EndsWith(' '));
+    }
+
+    [Fact]
     public void NormalizationUsesNfkcAndStableWhitespace()
     {
         Assert.Equal(

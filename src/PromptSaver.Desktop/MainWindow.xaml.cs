@@ -41,10 +41,9 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveLayout(double width)
     {
-        bool compact = width < 720;
-        CompactHeader.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
-        NavigationRail.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        NavigationColumn.Width = compact ? new GridLength(0) : new GridLength(180);
+        TopNavigation.Margin = width < 720
+            ? new Thickness(0)
+            : new Thickness(2, 0, 0, 0);
     }
 
     private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -56,6 +55,53 @@ public partial class MainWindow : Window
                 DispatcherPriority.Loaded,
                 () => MoveFocus(request.Target));
         }
+
+        if (e.PropertyName == nameof(ShellViewModel.IsDarkTheme))
+        {
+            ApplyTheme(_viewModel.IsDarkTheme);
+        }
+
+        if (e.PropertyName == nameof(ShellViewModel.ZoomPercentage))
+        {
+            ApplyZoom(_viewModel.ZoomPercentage);
+        }
+    }
+
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
+        {
+            return;
+        }
+
+        _viewModel.ChangeZoom(e.Delta > 0 ? 10 : -10);
+        e.Handled = true;
+    }
+
+    private static void ApplyTheme(bool dark)
+    {
+        SetBrush("AppBackgroundBrush", dark ? "#0F172A" : "#F4F6FA");
+        SetBrush("SurfaceBrush", dark ? "#111827" : "#FFFFFF");
+        SetBrush("SurfaceMutedBrush", dark ? "#1E293B" : "#EEF2F7");
+        SetBrush("TextBrush", dark ? "#F8FAFC" : "#172033");
+        SetBrush("MutedTextBrush", dark ? "#AAB5C5" : "#667085");
+        SetBrush("BorderBrush", dark ? "#334155" : "#D8DEE9");
+        SetBrush("AccentBrush", dark ? "#60A5FA" : "#2563EB");
+        SetBrush("AccentHoverBrush", dark ? "#3B82F6" : "#1D4ED8");
+        SetBrush("AccentPressedBrush", dark ? "#93C5FD" : "#1E40AF");
+        SetBrush("SelectionBrush", dark ? "#243B67" : "#E8EFFF");
+    }
+
+    private static void SetBrush(string key, string color) =>
+        System.Windows.Application.Current.Resources[key] =
+            new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
+
+    private static void ApplyZoom(int percentage)
+    {
+        double scale = percentage / 100d;
+        System.Windows.Application.Current.Resources["BaseFontSize"] = 14d * scale;
+        System.Windows.Application.Current.Resources["PageHeadingFontSize"] = 22d * scale;
+        System.Windows.Application.Current.Resources["SectionHeadingFontSize"] = 15d * scale;
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -143,7 +189,7 @@ public partial class MainWindow : Window
     {
         string automationId = target switch
         {
-            FocusTarget.Navigation => CompactHeader.Visibility == Visibility.Visible ? "CompactNewButton" : "NewNavigationButton",
+            FocusTarget.Navigation => "NewNavigationButton",
             FocusTarget.PromptEditor => "PromptEditor",
             FocusTarget.CaptureMetadata => "CaptureMetadataButton",
             FocusTarget.CaptureActions => "SavePromptButton",
@@ -158,7 +204,7 @@ public partial class MainWindow : Window
             FocusTarget.PromptDetailActions => "RequestDeleteButton",
             FocusTarget.PromptDetailStatus => "PromptDetailStatus",
             FocusTarget.SettingsCategories => "SettingsCategories",
-            FocusTarget.SettingsContent => "ThemePicker",
+            FocusTarget.SettingsContent => "GeneralSpellCheck",
             FocusTarget.SettingsActions => "SettingsActions",
             FocusTarget.SettingsStatus => "SettingsStatus",
             _ => string.Empty,

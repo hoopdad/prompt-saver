@@ -64,18 +64,22 @@ public sealed class SqliteProviderStore :
             await using SqliteConnection connection = await _connections.OpenAsync(cancellationToken);
             await using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
-                "SELECT configuration_json FROM provider_configurations ORDER BY updated_at_utc DESC;";
+                "SELECT id, configuration_json FROM provider_configurations ORDER BY updated_at_utc DESC;";
             await using SqliteDataReader reader =
                 await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
                 ProviderConfigurationDto? configuration =
                     JsonSerializer.Deserialize<ProviderConfigurationDto>(
-                        reader.GetString(0),
+                        reader.GetString(1),
                         JsonOptions);
                 if (configuration is not null)
                 {
-                    results.Add(configuration);
+                    results.Add(
+                        configuration with
+                        {
+                            Id = new ProviderConfigurationId(Guid.Parse(reader.GetString(0))),
+                        });
                 }
             }
 
@@ -119,9 +123,18 @@ public sealed class SqliteProviderStore :
                             JsonSerializer.Deserialize<ProviderConfigurationDto>(
                                 reader.GetString(1),
                                 JsonOptions);
+                        string existingId = reader.GetString(0);
+                        if (item is not null)
+                        {
+                            item = item with
+                            {
+                                Id = new ProviderConfigurationId(Guid.Parse(existingId)),
+                            };
+                        }
+
                         if (item is not null && item.Id != configuration.Id && item.IsEnabled)
                         {
-                            existing.Add((reader.GetString(0), item with { IsEnabled = false }));
+                            existing.Add((existingId, item with { IsEnabled = false }));
                         }
                     }
                 }
@@ -388,10 +401,11 @@ public sealed class SqliteProviderStore :
                 "SELECT proposal_json FROM enrichment_proposals WHERE prompt_id = $promptId;";
             command.Parameters.AddWithValue("$promptId", promptId.ToString());
             object? json = await command.ExecuteScalarAsync(cancellationToken);
+            MetadataProposalDto? proposal = json is string value
+                ? JsonSerializer.Deserialize<MetadataProposalDto>(value, JsonOptions)
+                : null;
             return AppResult.Success<MetadataProposalDto?>(
-                json is string value
-                    ? JsonSerializer.Deserialize<MetadataProposalDto>(value, JsonOptions)
-                    : null);
+                proposal is null ? null : proposal with { PromptId = promptId });
         }
         catch (Exception exception) when (exception is SqliteException or JsonException)
         {

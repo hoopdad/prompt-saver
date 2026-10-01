@@ -284,7 +284,11 @@ public sealed class CaptureViewModel : ViewModelBase
         RaiseSavedPromptCommands();
         State = CaptureState.PromptSaved;
         IntentFeedback = FormatIntentFeedback(_savedPrompt);
-        PublishStatus("Prompt saved", AnnouncementKind.Polite);
+        PublishStatus(
+            captureResult.Value.EnrichmentQueued
+                ? "Prompt saved. Ollama metadata inference is running."
+                : "Prompt saved",
+            AnnouncementKind.Polite);
         RequestFocus(FocusTarget.PromptEditor);
     }
 

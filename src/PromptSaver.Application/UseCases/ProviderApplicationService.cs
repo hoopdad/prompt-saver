@@ -46,6 +46,13 @@ public sealed class ProviderApplicationService :
                     "operation.cancelled",
                     "The operation was cancelled."));
         }
+        catch (Exception exception)
+        {
+            return UnexpectedFailure<ProviderConfigurationDto>(
+                "provider.configuration.unexpected",
+                "The provider configuration could not be saved.",
+                exception);
+        }
     }
 
     private async Task<AppResult<ProviderConfigurationDto>> ConfigureCoreAsync(
@@ -141,6 +148,13 @@ public sealed class ProviderApplicationService :
                     "operation.cancelled",
                     "The operation was cancelled."));
         }
+        catch (Exception exception)
+        {
+            return UnexpectedFailure<ProviderHealthDto>(
+                "provider.health.unexpected",
+                "The provider connection could not be checked.",
+                exception);
+        }
     }
 
     private async Task<AppResult<ProviderHealthDto>> CheckHealthCoreAsync(
@@ -166,4 +180,19 @@ public sealed class ProviderApplicationService :
 
         return await provider.CheckHealthAsync(configuration.Value, cancellationToken);
     }
+
+    private static AppResult<T> UnexpectedFailure<T>(
+        string key,
+        string message,
+        Exception exception) =>
+        AppResult.Failure<T>(
+            new AppError(
+                AppErrorCode.Unexpected,
+                key,
+                message,
+                IsRetryable: true,
+                Details: new Dictionary<string, string>
+                {
+                    ["reason"] = exception.GetType().Name,
+                }));
 }

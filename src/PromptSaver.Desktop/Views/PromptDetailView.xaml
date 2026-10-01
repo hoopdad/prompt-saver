@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:automation="clr-namespace:System.Windows.Automation;assembly=PresentationCore">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="16">
+        <Grid Margin="24,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -42,12 +42,14 @@
                     Grid.Row="4"
                     Margin="3,8"
                     Padding="10"
-                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                    BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
                     Focusable="True"
                     automation:AutomationProperties.AutomationId="PromptDetailMetadata">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionHeadingStyle}" Text="Metadata" />
+                    <TextBlock Style="{StaticResource SectionHeadingStyle}"
+                               Foreground="{DynamicResource TextBrush}"
+                               Text="Metadata" />
                     <TextBlock Text="{Binding MetadataSummary}" TextWrapping="Wrap" />
                     <TextBlock Margin="0,5" FontWeight="SemiBold" Text="{Binding IntentFeedback}" TextWrapping="Wrap" />
                     <ComboBox ItemsSource="{Binding Prompt.IntentCandidates}"
@@ -109,7 +111,7 @@
             <StackPanel Grid.Row="6">
                 <Border Margin="3"
                         Padding="10"
-                        BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1"
                         Visibility="{Binding DeleteConfirmationOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
                         automation:AutomationProperties.AutomationId="DeleteConfirmation">

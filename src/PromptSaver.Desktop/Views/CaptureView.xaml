@@ -4,7 +4,7 @@
              xmlns:automation="clr-namespace:System.Windows.Automation;assembly=PresentationCore"
              MinWidth="300"
              MinHeight="240">
-    <Grid Margin="16">
+    <Grid Margin="24,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -13,12 +13,41 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Style="{StaticResource PageHeadingStyle}"
-                   Text="Prompt"
-                   automation:AutomationProperties.AutomationId="CaptureHeading" />
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource PageHeadingStyle}"
+                           Text="Capture a prompt"
+                           automation:AutomationProperties.AutomationId="CaptureHeading" />
+                <TextBlock Margin="4,-7,4,0" Style="{StaticResource MutedTextStyle}"
+                           Text="Your draft is backed up locally while you work." />
+            </StackPanel>
+            <WrapPanel x:Name="CaptureActions"
+                       Grid.Column="1"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"
+                       automation:AutomationProperties.AutomationId="CaptureActions">
+                <Button Content="New"
+                        Command="{Binding NewPromptCommand}"
+                        automation:AutomationProperties.AutomationId="NewPromptAction" />
+                <Button Content="Copy"
+                        Command="{Binding CopyCommand}"
+                        automation:AutomationProperties.AutomationId="CopyPromptButton"
+                        automation:AutomationProperties.Name="Copy current prompt text" />
+                <Button Style="{StaticResource PrimaryButtonStyle}"
+                        Content="{Binding PrimaryActionText}"
+                        Command="{Binding SaveCommand}"
+                        automation:AutomationProperties.AutomationId="SavePromptButton"
+                        automation:AutomationProperties.Name="Save prompt" />
+            </WrapPanel>
+        </Grid>
 
-        <TextBox x:Name="PromptEditor"
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="12">
+            <TextBox x:Name="PromptEditor"
+                 BorderThickness="0"
                  Grid.Row="1"
                  MinHeight="150"
                  AcceptsReturn="True"
@@ -30,8 +59,9 @@
                  automation:AutomationProperties.AutomationId="PromptEditor"
                  automation:AutomationProperties.Name="Prompt"
                  automation:AutomationProperties.HelpText="Enter or paste the prompt to save. Ctrl+Enter saves and Ctrl+Shift+C copies." />
+        </Border>
 
-        <DockPanel Grid.Row="2" MinHeight="34" Margin="3,4">
+        <DockPanel Grid.Row="2" MinHeight="34" Margin="8,4">
             <TextBlock DockPanel.Dock="Right"
                        Margin="12,0,0,0"
                        VerticalAlignment="Center"
@@ -48,11 +78,15 @@
         <Border Grid.Row="3"
                 Margin="3,2,3,6"
                 Padding="8"
-                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
+                Background="{DynamicResource SurfaceMutedBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                CornerRadius="8"
                 BorderThickness="1"
                 Visibility="{Binding HasIntentFeedback, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel>
-                <TextBlock FontWeight="SemiBold" Text="Intent" />
+                <TextBlock FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextBrush}"
+                           Text="Intent" />
                 <TextBlock Text="{Binding IntentFeedback}" TextWrapping="Wrap" />
                 <Button HorizontalAlignment="Left"
                         Content="Review intent"
@@ -62,13 +96,9 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="4" Margin="0,4,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" Orientation="Horizontal">
+        <StackPanel Grid.Row="4" Orientation="Horizontal">
                 <Button Content="Metadata"
+                        Foreground="{DynamicResource TextBrush}"
                         Command="{Binding ReviewMetadataCommand}"
                         automation:AutomationProperties.AutomationId="CaptureMetadataButton"
                         automation:AutomationProperties.Name="Review metadata" />
@@ -76,24 +106,6 @@
                         Command="{Binding RetryBackupCommand}"
                         Visibility="{Binding CanRetryDraftBackup, Converter={StaticResource BooleanToVisibilityConverter}}"
                         automation:AutomationProperties.AutomationId="RetryDraftButton" />
-            </StackPanel>
-            <WrapPanel x:Name="CaptureActions"
-                       Grid.Column="1"
-                       HorizontalAlignment="Right"
-                       automation:AutomationProperties.AutomationId="CaptureActions">
-                <Button Content="New prompt"
-                        Command="{Binding NewPromptCommand}"
-                        automation:AutomationProperties.AutomationId="NewPromptAction" />
-                <Button Content="Copy"
-                        Command="{Binding CopyCommand}"
-                        automation:AutomationProperties.AutomationId="CopyPromptButton"
-                        automation:AutomationProperties.Name="Copy current prompt text" />
-                <Button MinHeight="40"
-                        Content="{Binding PrimaryActionText}"
-                        Command="{Binding SaveCommand}"
-                        automation:AutomationProperties.AutomationId="SavePromptButton"
-                        automation:AutomationProperties.Name="Save prompt" />
-            </WrapPanel>
-        </Grid>
+        </StackPanel>
     </Grid>
 </UserControl>

@@ -8,6 +8,7 @@
         MinWidth="480"
         MinHeight="360"
         PreviewKeyDown="OnPreviewKeyDown"
+        PreviewMouseWheel="OnPreviewMouseWheel"
         SizeChanged="OnWindowSizeChanged"
         automation:AutomationProperties.Name="Prompt Saver">
     <Window.InputBindings>
@@ -16,82 +17,66 @@
         <KeyBinding Key="OemComma" Modifiers="Control" Command="{Binding SettingsCommand}" />
     </Window.InputBindings>
 
-    <Grid Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+    <Grid Background="{DynamicResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border x:Name="CompactHeader"
-                Grid.Row="0"
-                Padding="6"
-                BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
-                BorderThickness="0,0,0,1"
-                Visibility="Collapsed">
-            <DockPanel>
-                <Button DockPanel.Dock="Left"
-                        Content="New"
+        <Border Grid.Row="0"
+                Padding="14,7"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel x:Name="TopNavigation"
+                            HorizontalAlignment="Left"
+                            Orientation="Horizontal"
+                            automation:AutomationProperties.AutomationId="Navigation">
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
+                        Content="New prompt"
                         Command="{Binding NewCommand}"
-                        automation:AutomationProperties.AutomationId="CompactNewButton" />
-                <Button DockPanel.Dock="Left"
+                        automation:AutomationProperties.AutomationId="NewNavigationButton" />
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
                         Content="Library"
                         Command="{Binding LibraryCommand}"
-                        automation:AutomationProperties.AutomationId="CompactLibraryButton" />
-                <Menu DockPanel.Dock="Right"
-                      HorizontalAlignment="Right"
-                      Background="Transparent"
-                      automation:AutomationProperties.AutomationId="MoreMenu">
-                    <MenuItem Header="More">
-                        <MenuItem Header="Settings"
-                                  InputGestureText="Ctrl+,"
-                                  Command="{Binding SettingsCommand}" />
-                        <MenuItem Header="Keyboard shortcuts"
-                                  Command="{Binding SettingsCommand}" />
-                    </MenuItem>
-                </Menu>
-            </DockPanel>
-        </Border>
-
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="NavigationColumn" Width="180" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <Border x:Name="NavigationRail"
-                    Grid.Column="0"
-                    Padding="8"
-                    Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"
-                    BorderBrush="{DynamicResource {x:Static SystemColors.ControlDarkBrushKey}}"
-                    BorderThickness="0,0,1,0"
-                    automation:AutomationProperties.AutomationId="Navigation">
-                <DockPanel>
-                    <Button DockPanel.Dock="Bottom"
-                            HorizontalContentAlignment="Left"
+                        automation:AutomationProperties.AutomationId="LibraryNavigationButton" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
+                            Content="A−"
+                            Command="{Binding ZoomOutCommand}"
+                            automation:AutomationProperties.AutomationId="ZoomOutButton"
+                            automation:AutomationProperties.Name="Decrease font size" />
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
+                            Content="{Binding ZoomText}"
+                            Command="{Binding ResetZoomCommand}"
+                            automation:AutomationProperties.AutomationId="ResetZoomButton"
+                            automation:AutomationProperties.Name="Reset font size to 100 percent" />
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
+                            Content="A+"
+                            Command="{Binding ZoomInCommand}"
+                            automation:AutomationProperties.AutomationId="ZoomInButton"
+                            automation:AutomationProperties.Name="Increase font size" />
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
+                            Content="{Binding ThemeToggleText}"
+                            Command="{Binding ToggleThemeCommand}"
+                            automation:AutomationProperties.AutomationId="ThemeToggleButton" />
+                    <Button Style="{StaticResource ToolbarButtonStyle}"
                             Content="Settings"
                             Command="{Binding SettingsCommand}"
                             automation:AutomationProperties.AutomationId="SettingsNavigationButton" />
-                    <StackPanel>
-                        <TextBlock Margin="8,10,8,18"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
-                                   Text="Prompt Saver" />
-                        <Button HorizontalContentAlignment="Left"
-                                Content="New prompt"
-                                Command="{Binding NewCommand}"
-                                automation:AutomationProperties.AutomationId="NewNavigationButton" />
-                        <Button HorizontalContentAlignment="Left"
-                                Content="Library"
-                                Command="{Binding LibraryCommand}"
-                                automation:AutomationProperties.AutomationId="LibraryNavigationButton" />
-                    </StackPanel>
-                </DockPanel>
-            </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
 
-            <ContentControl Grid.Column="1"
-                            Content="{Binding CurrentPage}"
-                            Focusable="False"
-                            automation:AutomationProperties.AutomationId="PageContent" />
-        </Grid>
+        <ContentControl Grid.Row="1"
+                        Content="{Binding CurrentPage}"
+                        Focusable="False"
+                        automation:AutomationProperties.AutomationId="PageContent" />
     </Grid>
 </Window>

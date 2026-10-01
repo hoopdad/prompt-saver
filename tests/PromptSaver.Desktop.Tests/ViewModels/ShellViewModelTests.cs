@@ -80,4 +80,39 @@ public sealed class ShellViewModelTests
 
         Assert.Equal(FocusTarget.LibraryMoreOptions, shell.FocusRequest?.Target);
     }
+
+    [Fact]
+    public void ThemeToggleSwitchesLabelAndState()
+    {
+        ShellViewModel shell = DesktopComposition.CreateShell(new NullDesktopUseCases());
+
+        Assert.False(shell.IsDarkTheme);
+        Assert.Equal("Dark mode", shell.ThemeToggleText);
+
+        shell.ToggleThemeCommand.Execute(null);
+
+        Assert.True(shell.IsDarkTheme);
+        Assert.Equal("Light mode", shell.ThemeToggleText);
+    }
+
+    [Fact]
+    public void ZoomCommandsClampAndResetPercentage()
+    {
+        ShellViewModel shell = DesktopComposition.CreateShell(new NullDesktopUseCases());
+
+        shell.ZoomInCommand.Execute(null);
+        Assert.Equal(110, shell.ZoomPercentage);
+        Assert.Equal("110%", shell.ZoomText);
+
+        for (int index = 0; index < 10; index++)
+        {
+            shell.ChangeZoom(10);
+        }
+
+        Assert.Equal(160, shell.ZoomPercentage);
+        Assert.False(shell.ZoomInCommand.CanExecute(null));
+
+        shell.ResetZoomCommand.Execute(null);
+        Assert.Equal(100, shell.ZoomPercentage);
+    }
 }

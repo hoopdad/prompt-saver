@@ -10,6 +10,8 @@ public sealed class ShellViewModel : ViewModelBase
     private ShellPage _currentPageKind;
     private FocusRequest? _focusRequest;
     private long _focusSequence;
+    private bool _isDarkTheme;
+    private int _zoomPercentage = 100;
 
     public ShellViewModel(
         CaptureViewModel capture,
@@ -29,6 +31,14 @@ public sealed class ShellViewModel : ViewModelBase
         LibraryCommand = new DelegateCommand(() => ShowLibrary(false));
         SearchLibraryCommand = new DelegateCommand(() => ShowLibrary(true));
         SettingsCommand = new AsyncDelegateCommand(ShowSettingsAsync);
+        ToggleThemeCommand = new DelegateCommand(ToggleTheme);
+        ZoomOutCommand = new DelegateCommand(
+            () => ChangeZoom(-10),
+            () => ZoomPercentage > 80);
+        ResetZoomCommand = new DelegateCommand(() => ZoomPercentage = 100);
+        ZoomInCommand = new DelegateCommand(
+            () => ChangeZoom(10),
+            () => ZoomPercentage < 160);
         Library.OpenPromptRequested += async (_, request) =>
             await ShowPromptDetailAsync(request.PromptId, request.FocusTarget);
         Capture.OpenSavedPromptRequested += async (_, request) =>
@@ -70,6 +80,37 @@ public sealed class ShellViewModel : ViewModelBase
         private set => SetProperty(ref _focusRequest, value);
     }
 
+    public bool IsDarkTheme
+    {
+        get => _isDarkTheme;
+        private set
+        {
+            if (SetProperty(ref _isDarkTheme, value))
+            {
+                OnPropertyChanged(nameof(ThemeToggleText));
+            }
+        }
+    }
+
+    public string ThemeToggleText => IsDarkTheme ? "Light mode" : "Dark mode";
+
+    public int ZoomPercentage
+    {
+        get => _zoomPercentage;
+        private set
+        {
+            int bounded = Math.Clamp(value, 80, 160);
+            if (SetProperty(ref _zoomPercentage, bounded))
+            {
+                OnPropertyChanged(nameof(ZoomText));
+                ZoomOutCommand.RaiseCanExecuteChanged();
+                ZoomInCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string ZoomText => $"{ZoomPercentage}%";
+
     public DelegateCommand NewCommand { get; }
 
     public DelegateCommand LibraryCommand { get; }
@@ -77,6 +118,14 @@ public sealed class ShellViewModel : ViewModelBase
     public DelegateCommand SearchLibraryCommand { get; }
 
     public AsyncDelegateCommand SettingsCommand { get; }
+
+    public DelegateCommand ToggleThemeCommand { get; }
+
+    public DelegateCommand ZoomOutCommand { get; }
+
+    public DelegateCommand ResetZoomCommand { get; }
+
+    public DelegateCommand ZoomInCommand { get; }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -125,6 +174,11 @@ public sealed class ShellViewModel : ViewModelBase
         CurrentPageKind = ShellPage.Settings;
         RequestFocus(FocusTarget.SettingsCategories);
     }
+
+    private void ToggleTheme() => IsDarkTheme = !IsDarkTheme;
+
+    public void ChangeZoom(int percentageDelta) =>
+        ZoomPercentage += percentageDelta;
 
     public void CycleFocusRegion(bool reverse)
     {

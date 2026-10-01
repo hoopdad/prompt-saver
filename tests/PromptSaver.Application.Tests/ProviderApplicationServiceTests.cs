@@ -58,6 +58,25 @@ public sealed class ProviderApplicationServiceTests
         Assert.Equal(saved.Value.CredentialTarget, credentials.DeletedTarget);
     }
 
+    [Fact]
+    public async Task HealthCheckForMissingConfigurationReturnsNotFound()
+    {
+        ProviderApplicationService service = new(
+            new FakeConfigurationStore(),
+            new RecordingCredentialStore(),
+            new FakeDiscovery(),
+            [new FakeProvider()],
+            new FakeIds());
+
+        AppResult<ProviderHealthDto> result = await service.ExecuteAsync(
+            new ProviderConfigurationId(Guid.Parse("0199a59c-7c00-7000-8000-000000000041")),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(AppErrorCode.NotFound, result.Error?.Code);
+        Assert.Equal("provider.not_found", result.Error?.Key);
+    }
+
     private sealed class FakeConfigurationStore : IProviderConfigurationStore
     {
         private ProviderConfigurationDto? _configuration;

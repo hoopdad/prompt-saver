@@ -25,6 +25,7 @@ public sealed record DeterministicMetadata(
 public static partial class DeterministicMetadataExtractor
 {
     public const string ExtractorVersion = "deterministic-v1";
+    private const int MaximumIntentCharacters = 160;
 
     private static readonly HashSet<string> ControlledVerbs =
         new(StringComparer.OrdinalIgnoreCase)
@@ -81,7 +82,9 @@ public static partial class DeterministicMetadataExtractor
             TryCreateObject(match.Groups["object"].Value, out string objectPhrase))
         {
             string verb = SentenceCase(match.Groups["verb"].Value.ToLowerInvariant());
-            candidate = $"{verb} {objectPhrase}";
+            candidate = TruncateAtWordBoundary(
+                $"{verb} {objectPhrase}",
+                MaximumIntentCharacters);
         }
 
         string title = candidate ?? CreateFallbackTitle(titleSource);
@@ -93,6 +96,12 @@ public static partial class DeterministicMetadataExtractor
     private static bool TryCreateObject(string rawObject, out string objectPhrase)
     {
         string cleaned = IntentTextNormalizer.NormalizeDisplay(rawObject);
+        int sentenceEnd = cleaned.IndexOfAny(['.', '!', '?', ';', ':']);
+        if (sentenceEnd >= 0)
+        {
+            cleaned = cleaned[..sentenceEnd];
+        }
+
         cleaned = TrailingPunctuationRegex().Replace(cleaned, string.Empty);
         cleaned = LeadingArticlesRegex().Replace(cleaned, string.Empty);
 
@@ -116,6 +125,17 @@ public static partial class DeterministicMetadataExtractor
         string normalizedObject = string.Join(' ', tokens.Select(FormatToken));
         objectPhrase = normalizedObject + qualifier;
         return objectPhrase.Length > 0;
+    }
+
+    private static string TruncateAtWordBoundary(string value, int maximumCharacters)
+    {
+        if (value.Length <= maximumCharacters)
+        {
+            return value;
+        }
+
+        int boundary = value.LastIndexOf(' ', maximumCharacters - 1);
+        return value[..(boundary > 0 ? boundary : maximumCharacters)].TrimEnd();
     }
 
     private static ExtractedSkill[] ExtractSkills(string body)
