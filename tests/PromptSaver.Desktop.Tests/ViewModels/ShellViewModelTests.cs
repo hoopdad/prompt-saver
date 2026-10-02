@@ -38,9 +38,26 @@ public sealed class ShellViewModelTests
         Assert.IsType<SettingsViewModel>(shell.CurrentPage);
         Assert.Equal(FocusTarget.SettingsCategories, shell.FocusRequest?.Target);
 
+        shell.CloseSettingsCommand.Execute(null);
+        Assert.IsType<LibraryViewModel>(shell.CurrentPage);
+        Assert.Equal(FocusTarget.LibraryResults, shell.FocusRequest?.Target);
+
         shell.ShowNewPrompt();
         Assert.IsType<CaptureViewModel>(shell.CurrentPage);
         Assert.Equal(FocusTarget.PromptEditor, shell.FocusRequest?.Target);
+    }
+
+    [Fact]
+    public void CloseSettingsReturnsToPreviousPage()
+    {
+        ShellViewModel shell = DesktopComposition.CreateShell(new NullDesktopUseCases());
+        shell.ShowLibrary(focusSearch: false);
+
+        shell.ShowSettings();
+        shell.CloseSettingsCommand.Execute(null);
+
+        Assert.IsType<LibraryViewModel>(shell.CurrentPage);
+        Assert.Equal(FocusTarget.LibraryResults, shell.FocusRequest?.Target);
     }
 
     [Fact]

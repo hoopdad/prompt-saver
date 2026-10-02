@@ -51,6 +51,12 @@ public interface IConfigureProvider
         CancellationToken cancellationToken);
 }
 
+public interface IGetProviderConfiguration
+{
+    Task<AppResult<ProviderConfigurationDto?>> ExecuteAsync(
+        CancellationToken cancellationToken);
+}
+
 public interface IDiscoverLocalOllama
 {
     Task<AppResult<ProviderHealthDto>> ExecuteAsync(CancellationToken cancellationToken);

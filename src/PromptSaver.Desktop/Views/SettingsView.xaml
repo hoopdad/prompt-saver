@@ -9,13 +9,24 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
-            <TextBlock Style="{StaticResource PageHeadingStyle}"
-                       Text="Settings"
-                       automation:AutomationProperties.AutomationId="SettingsHeading" />
-            <TextBlock Margin="4,-7,4,12" Style="{StaticResource MutedTextStyle}"
-                       Text="Configure optional AI metadata, recovery, and accessibility." />
-        </StackPanel>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Style="{StaticResource PageHeadingStyle}"
+                           Text="Settings"
+                           automation:AutomationProperties.AutomationId="SettingsHeading" />
+                <TextBlock Margin="4,-7,4,12" Style="{StaticResource MutedTextStyle}"
+                           Text="Configure optional AI metadata, recovery, and accessibility." />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    VerticalAlignment="Top"
+                    Content="Close settings"
+                    Command="{Binding DataContext.CloseSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    automation:AutomationProperties.AutomationId="CloseSettingsButton" />
+        </Grid>
 
         <TabControl x:Name="SettingsCategories"
                     Grid.Row="1"

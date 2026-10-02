@@ -22,6 +22,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
@@ -79,5 +80,19 @@
                         Content="{Binding CurrentPage}"
                         Focusable="False"
                         automation:AutomationProperties.AutomationId="PageContent" />
+
+        <Border Grid.Row="2"
+                MinHeight="30"
+                Padding="14,5"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0">
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Text="{Binding StatusMessage}"
+                       TextWrapping="Wrap"
+                       automation:AutomationProperties.AutomationId="ApplicationStatus"
+                       automation:AutomationProperties.LiveSetting="Polite" />
+        </Border>
     </Grid>
 </Window>

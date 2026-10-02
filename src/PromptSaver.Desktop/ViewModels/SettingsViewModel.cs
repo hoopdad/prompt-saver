@@ -8,6 +8,7 @@ namespace PromptSaver.Desktop.ViewModels;
 public sealed class SettingsViewModel : ViewModelBase, IDisposable
 {
     private readonly IConfigureProvider _configureProvider;
+    private readonly IGetProviderConfiguration _getProviderConfiguration;
     private readonly IDiscoverLocalOllama _discoverOllama;
     private readonly ICheckProviderHealth _checkProviderHealth;
     private readonly IListIntents _listIntents;
@@ -39,6 +40,7 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
     public SettingsViewModel(object services)
     {
         _configureProvider = Require<IConfigureProvider>(services);
+        _getProviderConfiguration = Require<IGetProviderConfiguration>(services);
         _discoverOllama = Require<IDiscoverLocalOllama>(services);
         _checkProviderHealth = Require<ICheckProviderHealth>(services);
         _listIntents = Require<IListIntents>(services);
@@ -251,6 +253,40 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
 
     public AsyncDelegateCommand MergeIntentsCommand { get; }
 
+    public async Task LoadAsync()
+    {
+        await LoadProviderAsync();
+        await LoadIntentsAsync();
+    }
+
+    public async Task LoadProviderAsync()
+    {
+        StatusMessage = "Loading provider settings...";
+        AppResult<ProviderConfigurationDto?> result =
+            await _getProviderConfiguration.ExecuteAsync(CancellationToken.None);
+        if (!result.IsSuccess)
+        {
+            StatusMessage = $"Provider settings could not be loaded. {result.Error?.Message}";
+            return;
+        }
+
+        if (result.Value is null)
+        {
+            StatusMessage = "No AI provider is configured. Local capture and search are ready.";
+            return;
+        }
+
+        ProviderConfigurationDto configuration = result.Value;
+        _providerId = configuration.Id;
+        ProviderEndpoint = configuration.Endpoint.AbsoluteUri;
+        ProviderModel = configuration.Model;
+        ProviderEnabled = configuration.IsEnabled;
+        RemoteHttpAcknowledged = configuration.RemoteHttpAcknowledged;
+        CredentialConfigured = configuration.CredentialTarget is not null;
+        StatusMessage =
+            $"Loaded model \"{configuration.Model}\" ({(configuration.IsEnabled ? "enabled" : "disabled")}).";
+    }
+
     public async Task LoadIntentsAsync()
     {
         AppResult<IReadOnlyList<IntentSummaryDto>> result =
@@ -272,8 +308,8 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
             await ConfigureProviderAsync(CancellationToken.None);
         StatusMessage = result.IsSuccess
             ? CredentialConfigured
-                ? "Provider configuration saved. The API key is stored in Windows Credential Manager."
-                : "Provider configuration saved."
+                ? $"Saved model \"{result.Value.Model}\". The API key is stored in Windows Credential Manager."
+                : $"Saved model \"{result.Value.Model}\"."
             : $"Provider configuration was not saved. {result.Error?.Message}";
     }
 
@@ -348,7 +384,7 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
         CancellationTokenSource cancellation = new();
         _providerTestCancellation = cancellation;
         IsTestingProvider = true;
-        StatusMessage = "Testing provider connection...";
+        StatusMessage = $"Testing model \"{ProviderModel}\" at {ProviderEndpoint}...";
         try
         {
             AppResult<ProviderConfigurationDto> configured =

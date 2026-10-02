@@ -692,12 +692,14 @@ public sealed class PostRenderOllamaDiscovery
 
 internal sealed class ProviderHttp : IDisposable
 {
-    private static readonly TimeSpan TotalTimeout = TimeSpan.FromSeconds(30);
+    internal static readonly TimeSpan DefaultTotalTimeout = TimeSpan.FromMinutes(2);
     private readonly HttpClient _client;
+    private readonly TimeSpan _totalTimeout;
 
-    public ProviderHttp(HttpMessageHandler handler)
+    public ProviderHttp(HttpMessageHandler handler, TimeSpan? totalTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(handler);
+        _totalTimeout = totalTimeout ?? DefaultTotalTimeout;
         _client = new HttpClient(handler, disposeHandler: true)
         {
             Timeout = Timeout.InfiniteTimeSpan,
@@ -759,7 +761,7 @@ internal sealed class ProviderHttp : IDisposable
         CancellationToken cancellationToken)
     {
         using (request)
-        using (CancellationTokenSource timeout = new(TotalTimeout))
+        using (CancellationTokenSource timeout = new(_totalTimeout))
         using (CancellationTokenSource linked =
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token))
         {
@@ -806,7 +808,7 @@ internal sealed class ProviderHttp : IDisposable
             {
                 return ProviderErrors.Unavailable<JsonDocument>(
                     "provider.http.timeout",
-                    "The provider request timed out.");
+                    $"The provider request timed out after {_totalTimeout.TotalSeconds:0} seconds.");
             }
             catch (ProviderResponseException)
             {

@@ -85,6 +85,8 @@ public static class DesktopComposition
         services.AddSingleton<ProviderApplicationService>();
         services.AddSingleton<IConfigureProvider>(
             provider => provider.GetRequiredService<ProviderApplicationService>());
+        services.AddSingleton<IGetProviderConfiguration>(
+            provider => provider.GetRequiredService<ProviderApplicationService>());
         services.AddSingleton<IDiscoverLocalOllama>(
             provider => provider.GetRequiredService<ProviderApplicationService>());
         services.AddSingleton<ICheckProviderHealth>(
@@ -128,6 +130,7 @@ public static class DesktopComposition
 
     private sealed class DesktopUseCaseAdapter :
         IConfigureProvider,
+        IGetProviderConfiguration,
         IDiscoverLocalOllama,
         ICheckProviderHealth,
         IListIntents,
@@ -152,6 +155,10 @@ public static class DesktopComposition
             Application.Dtos.ConfigureProviderCommand command,
             CancellationToken cancellationToken) =>
             _providers.ExecuteAsync(command, cancellationToken);
+
+        Task<Application.AppResult<Application.Dtos.ProviderConfigurationDto?>> IGetProviderConfiguration.ExecuteAsync(
+            CancellationToken cancellationToken) =>
+            _providers.ExecuteAsync(cancellationToken);
 
         Task<Application.AppResult<Application.Dtos.ProviderHealthDto>> IDiscoverLocalOllama.ExecuteAsync(
             CancellationToken cancellationToken) =>

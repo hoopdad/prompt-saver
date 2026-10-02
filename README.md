@@ -29,6 +29,8 @@ available before the database and optional provider discovery finish. Use:
 - `Ctrl+F` to open Library search.
 - `Ctrl+,` to open settings, provider configuration, backup/restore, search
   repair, intent merge/reclassification, and diagnostics.
+- Settings reloads the saved provider model and shows save, connection, and
+  LLM activity in the fixed status bar at the bottom of the window.
 - Library `More options` exposes intent/metadata review, duplication, and
   confirmed permanent deletion.
 

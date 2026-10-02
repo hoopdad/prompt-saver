@@ -26,6 +26,7 @@ public sealed class SettingsViewModelTests
         Assert.Equal(string.Empty, viewModel.ProviderApiKey);
         Assert.True(viewModel.CredentialConfigured);
         Assert.DoesNotContain("secret", viewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.Contains("deployment", viewModel.StatusMessage, StringComparison.Ordinal);
 
         await viewModel.TestProviderCommand.ExecuteAsync();
 
@@ -55,6 +56,30 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public async Task LoadsSavedProviderModelAndEnabledState()
+    {
+        SettingsServices services = new()
+        {
+            SavedConfiguration = new ProviderConfigurationDto(
+                new ProviderConfigurationId(Guid.CreateVersion7()),
+                ProviderKind.Ollama,
+                "Ollama",
+                new Uri("http://127.0.0.1:11434"),
+                "qwen3:latest",
+                true,
+                false,
+                null),
+        };
+        using SettingsViewModel viewModel = new(services);
+
+        await viewModel.LoadProviderAsync();
+
+        Assert.Equal("qwen3:latest", viewModel.ProviderModel);
+        Assert.True(viewModel.ProviderEnabled);
+        Assert.Contains("qwen3:latest", viewModel.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LoadsAndMergesIntentsWithPromptCountConfirmation()
     {
         SettingsServices services = new();
@@ -80,6 +105,7 @@ public sealed class SettingsViewModelTests
 
     private sealed class SettingsServices :
         IConfigureProvider,
+        IGetProviderConfiguration,
         IDiscoverLocalOllama,
         ICheckProviderHealth,
         IListIntents,
@@ -97,6 +123,8 @@ public sealed class SettingsViewModelTests
         public ProviderConfigurationId? CheckedProviderId { get; private set; }
 
         public bool BlockHealthCheck { get; init; }
+
+        public ProviderConfigurationDto? SavedConfiguration { get; init; }
 
         public MergeIntentsCommand? LastMerge { get; private set; }
 
@@ -120,6 +148,10 @@ public sealed class SettingsViewModelTests
                         command.RemoteHttpAcknowledged,
                         command.RemoveCredential ? null : "PromptSaver.Provider.test")));
         }
+
+        Task<AppResult<ProviderConfigurationDto?>> IGetProviderConfiguration.ExecuteAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult(AppResult.Success(SavedConfiguration));
 
         Task<AppResult<ProviderHealthDto>> IDiscoverLocalOllama.ExecuteAsync(
             CancellationToken cancellationToken) =>

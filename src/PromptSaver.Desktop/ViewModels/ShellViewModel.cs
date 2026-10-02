@@ -8,6 +8,8 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly Func<CancellationToken, Task> _optionalInitialization;
     private object _currentPage;
     private ShellPage _currentPageKind;
+    private object _previousPage;
+    private ShellPage _previousPageKind;
     private FocusRequest? _focusRequest;
     private long _focusSequence;
     private bool _isDarkTheme;
@@ -26,11 +28,14 @@ public sealed class ShellViewModel : ViewModelBase
         Settings = settings;
         _currentPage = capture;
         _currentPageKind = ShellPage.Capture;
+        _previousPage = capture;
+        _previousPageKind = ShellPage.Capture;
         _optionalInitialization = optionalInitialization ?? (_ => Task.CompletedTask);
         NewCommand = new DelegateCommand(ShowNewPrompt);
         LibraryCommand = new DelegateCommand(() => ShowLibrary(false));
         SearchLibraryCommand = new DelegateCommand(() => ShowLibrary(true));
         SettingsCommand = new AsyncDelegateCommand(ShowSettingsAsync);
+        CloseSettingsCommand = new DelegateCommand(CloseSettings);
         ToggleThemeCommand = new DelegateCommand(ToggleTheme);
         ZoomOutCommand = new DelegateCommand(
             () => ChangeZoom(-10),
@@ -51,6 +56,10 @@ public sealed class ShellViewModel : ViewModelBase
         Capture.PropertyChanged += OnChildFocusRequested;
         Library.PropertyChanged += OnChildFocusRequested;
         Detail.PropertyChanged += OnChildFocusRequested;
+        Settings.PropertyChanged += OnChildStatusChanged;
+        Capture.PropertyChanged += OnChildStatusChanged;
+        Library.PropertyChanged += OnChildStatusChanged;
+        Detail.PropertyChanged += OnChildStatusChanged;
         RequestFocus(FocusTarget.PromptEditor);
     }
 
@@ -65,7 +74,13 @@ public sealed class ShellViewModel : ViewModelBase
     public object CurrentPage
     {
         get => _currentPage;
-        private set => SetProperty(ref _currentPage, value);
+        private set
+        {
+            if (SetProperty(ref _currentPage, value))
+            {
+                OnPropertyChanged(nameof(StatusMessage));
+            }
+        }
     }
 
     public ShellPage CurrentPageKind
@@ -111,6 +126,16 @@ public sealed class ShellViewModel : ViewModelBase
 
     public string ZoomText => $"{ZoomPercentage}%";
 
+    public string StatusMessage =>
+        CurrentPage switch
+        {
+            CaptureViewModel capture => capture.StatusMessage,
+            LibraryViewModel library => library.StatusMessage,
+            PromptDetailViewModel detail => detail.StatusMessage,
+            SettingsViewModel settings => settings.StatusMessage,
+            _ => "Ready",
+        };
+
     public DelegateCommand NewCommand { get; }
 
     public DelegateCommand LibraryCommand { get; }
@@ -118,6 +143,8 @@ public sealed class ShellViewModel : ViewModelBase
     public DelegateCommand SearchLibraryCommand { get; }
 
     public AsyncDelegateCommand SettingsCommand { get; }
+
+    public DelegateCommand CloseSettingsCommand { get; }
 
     public DelegateCommand ToggleThemeCommand { get; }
 
@@ -165,14 +192,33 @@ public sealed class ShellViewModel : ViewModelBase
     public async Task ShowSettingsAsync()
     {
         ShowSettings();
-        await Settings.LoadIntentsAsync();
+        await Settings.LoadAsync();
     }
 
     public void ShowSettings()
     {
+        if (CurrentPageKind != ShellPage.Settings)
+        {
+            _previousPage = CurrentPage;
+            _previousPageKind = CurrentPageKind;
+        }
+
         CurrentPage = Settings;
         CurrentPageKind = ShellPage.Settings;
         RequestFocus(FocusTarget.SettingsCategories);
+    }
+
+    public void CloseSettings()
+    {
+        CurrentPage = _previousPage;
+        CurrentPageKind = _previousPageKind;
+        RequestFocus(_previousPageKind switch
+        {
+            ShellPage.Capture => FocusTarget.PromptEditor,
+            ShellPage.Library => FocusTarget.LibraryResults,
+            ShellPage.PromptDetail => FocusTarget.PromptDetailHeading,
+            _ => FocusTarget.Navigation,
+        });
     }
 
     private void ToggleTheme() => IsDarkTheme = !IsDarkTheme;
@@ -223,6 +269,15 @@ public sealed class ShellViewModel : ViewModelBase
         if (request is not null)
         {
             RequestFocus(request.Target);
+        }
+    }
+
+    private void OnChildStatusChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CaptureViewModel.StatusMessage) &&
+            ReferenceEquals(CurrentPage, sender))
+        {
+            OnPropertyChanged(nameof(StatusMessage));
         }
     }
 }

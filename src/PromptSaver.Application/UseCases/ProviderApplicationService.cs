@@ -7,6 +7,7 @@ namespace PromptSaver.Application.UseCases;
 
 public sealed class ProviderApplicationService :
     IConfigureProvider,
+    IGetProviderConfiguration,
     IDiscoverLocalOllama,
     ICheckProviderHealth
 {
@@ -126,6 +127,35 @@ public sealed class ProviderApplicationService :
             command.RemoteHttpAcknowledged,
             credentialTarget);
         return await _configurations.SaveAsync(configuration, cancellationToken);
+    }
+
+    public async Task<AppResult<ProviderConfigurationDto?>> ExecuteAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            AppResult<IReadOnlyList<ProviderConfigurationDto>> configurations =
+                await _configurations.ListAsync(cancellationToken);
+            return configurations.IsSuccess
+                ? AppResult.Success<ProviderConfigurationDto?>(
+                    configurations.Value.Count == 0 ? null : configurations.Value[0])
+                : AppResult.Failure<ProviderConfigurationDto?>(configurations.Error!);
+        }
+        catch (OperationCanceledException)
+        {
+            return AppResult.Failure<ProviderConfigurationDto?>(
+                new AppError(
+                    AppErrorCode.Cancelled,
+                    "operation.cancelled",
+                    "The operation was cancelled."));
+        }
+        catch (Exception exception)
+        {
+            return UnexpectedFailure<ProviderConfigurationDto?>(
+                "provider.configuration.read_unexpected",
+                "The provider configuration could not be loaded.",
+                exception);
+        }
     }
 
     Task<AppResult<ProviderHealthDto>> IDiscoverLocalOllama.ExecuteAsync(

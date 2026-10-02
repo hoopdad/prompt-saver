@@ -23,6 +23,7 @@ public class NullDesktopUseCases :
     IManageMetadata,
     IQueryPromptIntent,
     IConfigureProvider,
+    IGetProviderConfiguration,
     IDiscoverLocalOllama,
     ICheckProviderHealth,
     ICreateBackup,
@@ -141,6 +142,10 @@ public class NullDesktopUseCases :
                     command.IsEnabled,
                     command.RemoteHttpAcknowledged,
                     null)));
+
+    Task<AppResult<ProviderConfigurationDto?>> IGetProviderConfiguration.ExecuteAsync(
+        CancellationToken cancellationToken) =>
+        Task.FromResult(AppResult.Success<ProviderConfigurationDto?>(null));
 
     Task<AppResult<ProviderHealthDto>> IDiscoverLocalOllama.ExecuteAsync(
         CancellationToken cancellationToken) =>
