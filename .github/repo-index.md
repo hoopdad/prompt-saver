@@ -208,8 +208,9 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, a fixed application status bar,
   Settings close navigation and saved-model reload, two-minute LLM requests,
-  nullable application results, defensive provider errors, and SQLite
-  hydration of provider/proposal IDs from relational keys.
+  strict provider JSON instructions with fenced-JSON recovery, nullable
+  application results, defensive provider errors, and SQLite hydration of
+  provider/proposal IDs from relational keys.
 - Windows packaging additions considered:
   `src/PromptSaver.Desktop/Properties/PublishProfiles`,
   `packaging/wix/PromptSaver.Installer/{Package,Folders}.wxs`,

@@ -47,6 +47,14 @@ public sealed class ProviderAdapterTests
                 using JsonDocument document = JsonDocument.Parse(json);
                 Assert.Equal("llama3.2", document.RootElement.GetProperty("model").GetString());
                 Assert.False(document.RootElement.GetProperty("stream").GetBoolean());
+                Assert.Equal("json", document.RootElement.GetProperty("format").GetString());
+                string prompt = document.RootElement.GetProperty("prompt").GetString()!;
+                using JsonDocument promptDocument = JsonDocument.Parse(prompt);
+                string instructions =
+                    promptDocument.RootElement.GetProperty("instructions").GetString()!;
+                Assert.Contains("one JSON object only", instructions, StringComparison.Ordinal);
+                Assert.Contains("Person|Organization|Product", instructions, StringComparison.Ordinal);
+                Assert.Contains("0 through 1", instructions, StringComparison.Ordinal);
 
                 return JsonResponse(
                     """
@@ -99,6 +107,38 @@ public sealed class ProviderAdapterTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, credentials.CallCount);
+    }
+
+    [Fact]
+    public void ResponsePolicyAcceptsJsonInsideMarkdownFence()
+    {
+        AppResult<ProviderEnrichmentResponse> result = ProviderResponsePolicy.Parse(
+            """
+            Here is the requested metadata:
+            ```json
+            {"title":"Release notes","intent":"Write release notes","skills":[],"entities":[]}
+            ```
+            """,
+            "Test provider",
+            "test-model");
+
+        Assert.True(result.IsSuccess, result.Error?.Message);
+        Assert.Equal("Write release notes", result.Value.Intent);
+    }
+
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("```text\n{\"intent\":\"Write release notes\",\"skills\":[],\"entities\":[]}\n```")]
+    [InlineData("```json\n{\"intent\":\"Write release notes\",\"skills\":[],\"entities\":[]}")]
+    public void ResponsePolicyRejectsAmbiguousOrInvalidContainers(string response)
+    {
+        AppResult<ProviderEnrichmentResponse> result = ProviderResponsePolicy.Parse(
+            response,
+            "Test provider",
+            "test-model");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("provider.response.invalid", result.Error?.Key);
     }
 
     [Fact]

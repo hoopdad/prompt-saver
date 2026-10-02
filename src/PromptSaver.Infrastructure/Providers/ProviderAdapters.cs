@@ -135,6 +135,7 @@ public sealed class OllamaEnrichmentProvider : IPromptEnrichmentProvider, IDispo
         {
             model = configuration.Model,
             stream = false,
+            format = "json",
             prompt = ProviderPrompt.Create(request),
         };
         AppResult<JsonDocument> response = await _http.PostJsonAsync(
@@ -391,8 +392,13 @@ public static class ProviderResponsePolicy
                 return Rejected("provider.response.too_large", "Provider response exceeded 64 KiB.");
             }
 
-            using JsonDocument document = JsonDocument.Parse(json);
+            using JsonDocument document = ParseDocument(json);
             JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                throw new ProviderResponseException();
+            }
+
             string? title = OptionalString(root, "title", 200);
             string? intent = OptionalString(root, "intent", MaximumValueCharacters);
             ProposedSkillDto[] skills = ParseSkills(root);
@@ -409,8 +415,38 @@ public static class ProviderResponsePolicy
         catch (Exception exception) when (
             exception is JsonException or ProviderResponseException)
         {
-            return Rejected("provider.response.invalid", "Provider response failed validation.");
+            return Rejected(
+                "provider.response.invalid",
+                "The provider did not return a valid metadata JSON object.");
         }
+    }
+
+    private static JsonDocument ParseDocument(string response)
+    {
+        string candidate = response.Trim().TrimStart('\uFEFF');
+        int openingFence = candidate.IndexOf("```", StringComparison.Ordinal);
+        if (openingFence < 0)
+        {
+            return JsonDocument.Parse(candidate);
+        }
+
+        int contentStart = candidate.IndexOf('\n', openingFence + 3);
+        int closingFence = contentStart < 0
+            ? -1
+            : candidate.IndexOf("```", contentStart + 1, StringComparison.Ordinal);
+        if (contentStart < 0 || closingFence < 0)
+        {
+            throw new ProviderResponseException();
+        }
+
+        string fenceLabel = candidate[(openingFence + 3)..contentStart].Trim();
+        if (fenceLabel.Length > 0 &&
+            !string.Equals(fenceLabel, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ProviderResponseException();
+        }
+
+        return JsonDocument.Parse(candidate[(contentStart + 1)..closingFence].Trim());
     }
 
     private static ProposedSkillDto[] ParseSkills(JsonElement root)
@@ -844,8 +880,13 @@ internal static class ProviderPrompt
             contentTruncated = request.ContentTruncated || capped.ContentTruncated,
             prompt = capped.BodyExcerpt,
             instructions =
-                "Return JSON with optional title and intent, skills [{name,confidence}], " +
-                "and entities [{name,type,confidence}]. Do not rewrite the prompt.",
+                "Return one JSON object only, without Markdown or commentary. Use exactly: " +
+                "{\"title\":\"optional string\",\"intent\":\"optional verb-object string\"," +
+                "\"skills\":[{\"name\":\"string\",\"confidence\":0.0}]," +
+                "\"entities\":[{\"name\":\"string\",\"type\":\"Person|Organization|Product|" +
+                "Technology|Location|Document|Other\",\"confidence\":0.0}]}. " +
+                "Confidence must be a number from 0 through 1. Use empty arrays when none apply. " +
+                "Do not rewrite the prompt.",
         };
         return JsonSerializer.Serialize(content);
     }

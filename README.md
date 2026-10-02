@@ -31,6 +31,9 @@ available before the database and optional provider discovery finish. Use:
   repair, intent merge/reclassification, and diagnostics.
 - Settings reloads the saved provider model and shows save, connection, and
   LLM activity in the fixed status bar at the bottom of the window.
+- Provider prompts request a strict metadata JSON schema, while response
+  handling also accepts the common case where an LLM wraps valid JSON in a
+  Markdown code fence.
 - Library `More options` exposes intent/metadata review, duplication, and
   confirmed permanent deletion.
 
