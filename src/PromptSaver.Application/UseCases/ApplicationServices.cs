@@ -483,6 +483,11 @@ public sealed class PromptApplicationService :
                 : AppResult.Failure<PromptDetailsDto>(committed.Error!);
         }
 
+        if (command.Action == IntentReviewAction.RenameProvisional)
+        {
+            return await ApplyNamedIntentAsync(command, cancellationToken);
+        }
+
         if (command.SelectedIntentId is null)
         {
             return Validation<PromptDetailsDto>("Choose an intent before completing review.");
@@ -495,6 +500,73 @@ public sealed class PromptApplicationService :
                 IntentAssignment.UserCorrected,
                 command.PromptVersion),
             cancellationToken);
+    }
+
+    private async Task<AppResult<PromptDetailsDto>> ApplyNamedIntentAsync(
+        ReviewIntentAssignmentCommand command,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            string canonicalName = command.RenamedIntent?.Trim() ?? string.Empty;
+            AppResult<IAppUnitOfWork> begin = await _units.BeginAsync(cancellationToken);
+            if (!begin.IsSuccess)
+            {
+                return AppResult.Failure<PromptDetailsDto>(begin.Error!);
+            }
+
+            await using IAppUnitOfWork unit = begin.Value;
+            Prompt? prompt = await unit.Prompts.GetAsync(command.PromptId, cancellationToken);
+            if (prompt is null)
+            {
+                return NotFound<PromptDetailsDto>();
+            }
+
+            if (prompt.Version != command.PromptVersion)
+            {
+                return Conflict<PromptDetailsDto>("prompt.intent_conflict");
+            }
+
+            string normalizedKey = NormalizedText.CreateKey(
+                canonicalName,
+                "intent.name.required",
+                nameof(command.RenamedIntent));
+            Intent? intent = await unit.Intents.FindByNormalizedKeyAsync(
+                normalizedKey,
+                includeArchived: true,
+                cancellationToken);
+            if (intent is null)
+            {
+                intent = Intent.Create(
+                    _ids.NewIntentId(),
+                    canonicalName,
+                    IntentSource.User,
+                    _clock.UtcNow);
+                await unit.Intents.AddAsync(intent, cancellationToken);
+            }
+            else if (intent.IsArchived)
+            {
+                long previousVersion = intent.Version;
+                intent.Unarchive(_clock.UtcNow);
+                await unit.Intents.UpdateAsync(intent, previousVersion, cancellationToken);
+            }
+
+            IntentMutationCoordinator.Reclassify(
+                prompt,
+                intent,
+                IntentAssignment.UserCorrected,
+                _clock.UtcNow);
+            await unit.Prompts.UpdateAsync(prompt, command.PromptVersion, cancellationToken);
+            await unit.IntentCandidates.ReplaceAsync(prompt.Id, [], cancellationToken);
+            AppResult committed = await unit.CommitAsync(cancellationToken);
+            return committed.IsSuccess
+                ? await GetDetailsAsync(prompt.Id, cancellationToken)
+                : AppResult.Failure<PromptDetailsDto>(committed.Error!);
+        }
+        catch (DomainValidationException exception)
+        {
+            return Validation<PromptDetailsDto>(exception.Message);
+        }
     }
 
     public async Task<AppResult<PromptDetailsDto>> ExecuteAsync(

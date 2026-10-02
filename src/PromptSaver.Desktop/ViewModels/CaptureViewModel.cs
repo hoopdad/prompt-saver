@@ -46,9 +46,9 @@ public sealed class CaptureViewModel : ViewModelBase
         ReviewIntentCommand = new DelegateCommand(
             () => OpenSavedPrompt(FocusTarget.PromptDetailMetadata),
             () => _savedPrompt is not null);
-        ReviewMetadataCommand = new DelegateCommand(
-            () => OpenSavedPrompt(FocusTarget.PromptDetailMetadata),
-            () => _savedPrompt is not null);
+        ReviewMetadataCommand = new AsyncDelegateCommand(
+            SaveAndOpenMetadataAsync,
+            () => _savedPrompt is not null || CanSave);
     }
 
     public string Body
@@ -155,6 +155,9 @@ public sealed class CaptureViewModel : ViewModelBase
 
     public string PrimaryActionText => _savedPrompt is null ? "Save prompt" : "Save changes";
 
+    public string MetadataActionText =>
+        _savedPrompt is null ? "Save and edit metadata" : "Edit metadata";
+
     public AsyncDelegateCommand SaveCommand { get; }
 
     public AsyncDelegateCommand CopyCommand { get; }
@@ -167,7 +170,7 @@ public sealed class CaptureViewModel : ViewModelBase
 
     public DelegateCommand ReviewIntentCommand { get; }
 
-    public DelegateCommand ReviewMetadataCommand { get; }
+    public AsyncDelegateCommand ReviewMetadataCommand { get; }
 
     public event EventHandler<PromptNavigationRequest>? OpenSavedPromptRequested;
 
@@ -321,6 +324,19 @@ public sealed class CaptureViewModel : ViewModelBase
         }
     }
 
+    private async Task SaveAndOpenMetadataAsync()
+    {
+        if (_savedPrompt is null)
+        {
+            await SaveAsync();
+        }
+
+        if (_savedPrompt is not null)
+        {
+            OpenSavedPrompt(FocusTarget.PromptDetailMetadata);
+        }
+    }
+
     public async Task StartNewAsync()
     {
         if (State == CaptureState.DraftBackupFailed && !string.IsNullOrWhiteSpace(Body))
@@ -425,6 +441,7 @@ public sealed class CaptureViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsOverSizeLimit));
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(CanCopy));
+        OnPropertyChanged(nameof(MetadataActionText));
         RaiseCommandStates();
     }
 
@@ -434,12 +451,14 @@ public sealed class CaptureViewModel : ViewModelBase
         CopyCommand.RaiseCanExecuteChanged();
         RetryBackupCommand.RaiseCanExecuteChanged();
         SaveAndCopyCommand.RaiseCanExecuteChanged();
+        ReviewMetadataCommand.RaiseCanExecuteChanged();
     }
 
     private void RaiseSavedPromptCommands()
     {
         ReviewIntentCommand.RaiseCanExecuteChanged();
         ReviewMetadataCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(MetadataActionText));
     }
 
     private void OpenSavedPrompt(FocusTarget focusTarget)

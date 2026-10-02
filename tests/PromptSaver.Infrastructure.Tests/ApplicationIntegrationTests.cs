@@ -204,6 +204,32 @@ public sealed class ApplicationIntegrationTests
         Assert.Equal(prompt.Id, Assert.Single(search.Value.Items).Id);
     }
 
+    [Fact]
+    public async Task SuggestedIntentCanReplaceUnsortedWithNewUserIntent()
+    {
+        using TestStorage storage = new();
+        PromptApplicationService application = storage.CreateApplication(new RecordingClipboard());
+        AppResult<CapturePromptResult> captured = await application.ExecuteAsync(
+            new CapturePromptCommand("Azure", null),
+            TestContext.Current.CancellationToken);
+        Assert.True(captured.IsSuccess, captured.Error?.Message);
+        Assert.Equal(IntentAssignment.Unsorted, captured.Value.Prompt.IntentAssignment);
+
+        AppResult<PromptDetailsDto> updated = await application.ExecuteAsync(
+            new ReviewIntentAssignmentCommand(
+                captured.Value.Prompt.Id,
+                IntentReviewAction.RenameProvisional,
+                null,
+                "Analyze Azure usage",
+                captured.Value.Prompt.Version),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(updated.IsSuccess, updated.Error?.Message);
+        Assert.Equal("Analyze Azure usage", updated.Value.Intent.CanonicalName);
+        Assert.Equal(IntentAssignment.UserCorrected, updated.Value.IntentAssignment);
+        Assert.Equal(IntentReviewState.Resolved, updated.Value.IntentReviewState);
+    }
+
     private sealed class TestStorage : IDisposable
     {
         private readonly string _root = Path.Combine(

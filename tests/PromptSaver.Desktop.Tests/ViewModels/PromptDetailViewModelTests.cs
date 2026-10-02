@@ -37,7 +37,14 @@ public sealed class PromptDetailViewModelTests
 
         Assert.Equal(services.Prompt.Id, services.LastIntentQuery?.PromptId);
         Assert.Equal("Draft release notes", viewModel.LlmIntentSuggestion);
-        Assert.Contains("Test provider", viewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.Equal("Draft release notes", viewModel.IntentText);
+        Assert.Contains("Use as intent", viewModel.StatusMessage, StringComparison.Ordinal);
+
+        await viewModel.UseIntentCommand.ExecuteAsync();
+
+        Assert.Equal(IntentReviewAction.RenameProvisional, services.LastReview?.Action);
+        Assert.Equal("Draft release notes", services.LastReview?.RenamedIntent);
+        Assert.Equal("Intent set to \"Draft release notes\".", viewModel.StatusMessage);
     }
 
     private sealed class DetailServices :
@@ -90,6 +97,9 @@ public sealed class PromptDetailViewModelTests
             LastReview = command;
             Prompt = Prompt with
             {
+                Intent = command.Action == IntentReviewAction.RenameProvisional
+                    ? Prompt.Intent with { CanonicalName = command.RenamedIntent! }
+                    : Prompt.Intent,
                 IntentAssignment = IntentAssignment.UserSelected,
                 IntentReviewState = IntentReviewState.Resolved,
                 Version = Prompt.Version + 1,

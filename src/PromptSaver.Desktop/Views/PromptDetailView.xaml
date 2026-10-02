@@ -52,6 +52,11 @@
                                Text="Metadata" />
                     <TextBlock Text="{Binding MetadataSummary}" TextWrapping="Wrap" />
                     <TextBlock Margin="0,5" FontWeight="SemiBold" Text="{Binding IntentFeedback}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,4,0,0" Text="Intent" />
+                    <TextBox Text="{Binding IntentText, UpdateSourceTrigger=PropertyChanged}"
+                             automation:AutomationProperties.AutomationId="IntentEditor"
+                             automation:AutomationProperties.Name="Intent name"
+                             automation:AutomationProperties.HelpText="Edit the current or suggested intent, then choose Use as intent." />
                     <ComboBox ItemsSource="{Binding Prompt.IntentCandidates}"
                               SelectedItem="{Binding SelectedIntentCandidate}"
                               DisplayMemberPath="CurrentDisplayName"
@@ -74,10 +79,15 @@
                                 Command="{Binding QueryIntentCommand}"
                                 automation:AutomationProperties.AutomationId="QueryIntentButton"
                                 automation:AutomationProperties.HelpText="Ask the enabled LLM provider to suggest an intent for this saved prompt." />
+                        <Button Style="{StaticResource PrimaryButtonStyle}"
+                                Content="Use as intent"
+                                Command="{Binding UseIntentCommand}"
+                                automation:AutomationProperties.AutomationId="UseIntentButton"
+                                automation:AutomationProperties.HelpText="Save the intent shown in the intent field for this prompt." />
                     </WrapPanel>
                     <TextBlock Margin="0,6,0,0"
                                FontWeight="SemiBold"
-                               Text="{Binding LlmIntentSuggestion, StringFormat=LLM suggestion: {0}}"
+                               Text="LLM suggestion loaded into the intent field. Edit it if needed, then choose Use as intent."
                                TextWrapping="Wrap"
                                Visibility="{Binding HasLlmIntentSuggestion, Converter={StaticResource BooleanToVisibilityConverter}}"
                                automation:AutomationProperties.AutomationId="LlmIntentSuggestion" />

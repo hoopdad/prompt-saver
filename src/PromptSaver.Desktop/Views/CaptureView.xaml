@@ -97,11 +97,12 @@
         </Border>
 
         <StackPanel Grid.Row="4" Orientation="Horizontal">
-                <Button Content="Metadata"
+                <Button Content="{Binding MetadataActionText}"
                         Foreground="{DynamicResource TextBrush}"
                         Command="{Binding ReviewMetadataCommand}"
                         automation:AutomationProperties.AutomationId="CaptureMetadataButton"
-                        automation:AutomationProperties.Name="Review metadata" />
+                        automation:AutomationProperties.Name="Edit prompt metadata"
+                        automation:AutomationProperties.HelpText="Saves the prompt first when needed, then opens its metadata editor." />
                 <Button Content="Try draft backup again"
                         Command="{Binding RetryBackupCommand}"
                         Visibility="{Binding CanRetryDraftBackup, Converter={StaticResource BooleanToVisibilityConverter}}"

@@ -27,6 +27,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
     private bool _isMetadataEditing;
     private bool _isQueryingIntent;
     private string _llmIntentSuggestion = string.Empty;
+    private string _intentText = string.Empty;
     private FocusRequest? _focusRequest;
     private long _focusSequence;
 
@@ -63,6 +64,12 @@ public sealed class PromptDetailViewModel : ViewModelBase
         QueryIntentCommand = new AsyncDelegateCommand(
             QueryIntentAsync,
             () => Prompt is not null && !HasUnsavedChanges && !IsQueryingIntent);
+        UseIntentCommand = new AsyncDelegateCommand(
+            UseIntentAsync,
+            () => Prompt is not null &&
+                !HasUnsavedChanges &&
+                !IsQueryingIntent &&
+                !string.IsNullOrWhiteSpace(IntentText));
     }
 
     public PromptDetailsDto? Prompt
@@ -88,6 +95,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveCommand.RaiseCanExecuteChanged();
                 QueryIntentCommand.RaiseCanExecuteChanged();
+                UseIntentCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -102,6 +110,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveCommand.RaiseCanExecuteChanged();
                 QueryIntentCommand.RaiseCanExecuteChanged();
+                UseIntentCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -163,6 +172,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
             if (SetProperty(ref _isQueryingIntent, value))
             {
                 QueryIntentCommand.RaiseCanExecuteChanged();
+                UseIntentCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -180,6 +190,18 @@ public sealed class PromptDetailViewModel : ViewModelBase
     }
 
     public bool HasLlmIntentSuggestion => !string.IsNullOrWhiteSpace(LlmIntentSuggestion);
+
+    public string IntentText
+    {
+        get => _intentText;
+        set
+        {
+            if (SetProperty(ref _intentText, value ?? string.Empty))
+            {
+                UseIntentCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
 
     public bool HasUnsavedChanges =>
         Prompt is not null && (Body != Prompt.Body || Title != Prompt.Title);
@@ -235,6 +257,8 @@ public sealed class PromptDetailViewModel : ViewModelBase
     public DelegateCommand CancelMetadataCommand { get; }
 
     public AsyncDelegateCommand QueryIntentCommand { get; }
+
+    public AsyncDelegateCommand UseIntentCommand { get; }
 
     public async Task LoadAsync(PromptId promptId)
     {
@@ -496,8 +520,9 @@ public sealed class PromptDetailViewModel : ViewModelBase
             if (result.IsSuccess)
             {
                 LlmIntentSuggestion = result.Value.Intent;
+                IntentText = result.Value.Intent;
                 StatusMessage =
-                    $"LLM suggestion from {result.Value.ProviderName} ({result.Value.Model}): {result.Value.Intent}";
+                    $"Suggestion loaded from {result.Value.ProviderName} ({result.Value.Model}). Review it, then choose Use as intent.";
             }
             else
             {
@@ -507,6 +532,34 @@ public sealed class PromptDetailViewModel : ViewModelBase
         finally
         {
             IsQueryingIntent = false;
+        }
+    }
+
+    private async Task UseIntentAsync()
+    {
+        if (Prompt is null || string.IsNullOrWhiteSpace(IntentText))
+        {
+            return;
+        }
+
+        string intent = IntentText.Trim();
+        AppResult<PromptDetailsDto> result = await _reviewIntent.ExecuteAsync(
+            new ReviewIntentAssignmentCommand(
+                Prompt.Id,
+                IntentReviewAction.RenameProvisional,
+                null,
+                intent,
+                Prompt.Version),
+            CancellationToken.None);
+        if (result.IsSuccess)
+        {
+            ApplyPrompt(result.Value);
+            LlmIntentSuggestion = string.Empty;
+            StatusMessage = $"Intent set to \"{result.Value.Intent.CanonicalName}\".";
+        }
+        else
+        {
+            StatusMessage = $"Intent was not saved. {result.Error?.Message}";
         }
     }
 
@@ -521,9 +574,13 @@ public sealed class PromptDetailViewModel : ViewModelBase
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(HasUnsavedChanges));
         QueryIntentCommand.RaiseCanExecuteChanged();
+        IntentText = prompt.IntentAssignment == IntentAssignment.Unsorted
+            ? string.Empty
+            : prompt.Intent.CanonicalName;
         ResetMetadataText(prompt);
         KeepCurrentIntentCommand.RaiseCanExecuteChanged();
         EditMetadataCommand.RaiseCanExecuteChanged();
+        UseIntentCommand.RaiseCanExecuteChanged();
     }
 
     private void ResetMetadataText(PromptDetailsDto prompt)

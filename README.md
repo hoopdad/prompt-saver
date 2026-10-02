@@ -34,6 +34,9 @@ available before the database and optional provider discovery finish. Use:
 - Provider prompts request a strict metadata JSON schema, while response
   handling also accepts the common case where an LLM wraps valid JSON in a
   Markdown code fence.
+- Capture can save and open metadata editing in one action. LLM intent
+  suggestions populate an editable intent field and can be saved directly,
+  including replacing an Unsorted assignment.
 - Library `More options` exposes intent/metadata review, duplication, and
   confirmed permanent deletion.
 
@@ -72,18 +75,21 @@ connection tests use the configured provider endpoint and can be cancelled.
 
 ## Develop
 
-The pinned SDK is declared in `global.json`. Restore, format, build, and run the
-fast suites with:
+The pinned SDK is declared in `global.json`. Routine CI runs locally and can be
+started with:
 
 ```powershell
-dotnet restore .\PromptSaver.sln --locked-mode
-dotnet format .\PromptSaver.sln --verify-no-changes --no-restore
-dotnet build .\PromptSaver.sln -c Release --no-restore -p:TreatWarningsAsErrors=true
-dotnet test --project .\tests\PromptSaver.Domain.Tests\PromptSaver.Domain.Tests.csproj -c Release --no-build
-dotnet test --project .\tests\PromptSaver.Application.Tests\PromptSaver.Application.Tests.csproj -c Release --no-build
-dotnet test --project .\tests\PromptSaver.Infrastructure.Tests\PromptSaver.Infrastructure.Tests.csproj -c Release --no-build
-dotnet test --project .\tests\PromptSaver.Desktop.Tests\PromptSaver.Desktop.Tests.csproj -c Release --no-build
+.\scripts\Invoke-LocalCi.ps1
 ```
+
+Include both Windows packages and package validation when needed:
+
+```powershell
+.\scripts\Invoke-LocalCi.ps1 -IncludePackages -RuntimeIdentifier all
+```
+
+The routine GitHub Actions CI workflow is manual-only. The protected release
+workflow remains available for signed release artifacts.
 
 Publish native self-contained builds:
 

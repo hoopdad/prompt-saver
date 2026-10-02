@@ -69,8 +69,10 @@
   `scripts/New-WindowsPackageManifest.ps1`,
   `scripts/Sign-WindowsArtifacts.ps1`,
   `tests/PromptSaver.Package.Tests`
-- Pull-request unsigned package pipeline and protected signing-ready release:
-  `.github/workflows/ci.yml`, `.github/workflows/release-windows.yml`
+- Local routine CI entry point, manual-only GitHub CI, and protected
+  signing-ready release:
+  `scripts/Invoke-LocalCi.ps1`, `.github/workflows/ci.yml`,
+  `.github/workflows/release-windows.yml`
 - Windows packaging behavior and operations: `docs/windows-packaging.md`
 
 ## Technical layers
@@ -162,6 +164,7 @@ user data root.
   `tests/PromptSaver.Infrastructure.Tests/ApplicationIntegrationTests.cs`
 - Change CI or publish validation: `.github/workflows/ci.yml`,
   `.github/workflows/release-windows.yml`,
+  `scripts/Invoke-LocalCi.ps1`,
   `scripts/Build-WindowsPackages.ps1`,
   `scripts/Verify-PublishArchitecture.ps1`
 - Change installer source, harvesting, upgrade/cross-architecture behavior,
@@ -202,14 +205,16 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `e77c139`; prompt detail now supports an explicit,
-  suggestion-only LLM intent re-query for saved prompts.
+- Based on commit `ce7e66e`; current uncommitted work adds save-and-edit capture
+  metadata, directly applicable LLM intent suggestions, local CI, and release
+  version 0.1.13.
 - Current UI/provider reliability changes considered: compact top navigation
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, a fixed application status bar,
   Settings close navigation and saved-model reload, two-minute LLM requests,
   strict provider JSON instructions with fenced-JSON recovery, nullable
-  application results, defensive provider errors, and SQLite hydration of
+  application results, save-and-edit capture metadata, directly applicable
+  LLM intent suggestions, defensive provider errors, and SQLite hydration of
   provider/proposal IDs from relational keys.
 - Windows packaging additions considered:
   `src/PromptSaver.Desktop/Properties/PublishProfiles`,

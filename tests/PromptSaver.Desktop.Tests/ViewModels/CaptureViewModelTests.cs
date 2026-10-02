@@ -233,7 +233,7 @@ public sealed class CaptureViewModelTests
 
         await viewModel.SaveAsync(TestContext.Current.CancellationToken);
         viewModel.ReviewIntentCommand.Execute(null);
-        viewModel.ReviewMetadataCommand.Execute(null);
+        await viewModel.ReviewMetadataCommand.ExecuteAsync();
 
         Assert.Equal(2, requests.Count);
         Assert.All(
@@ -242,6 +242,28 @@ public sealed class CaptureViewModelTests
         Assert.All(
             requests,
             request => Assert.Equal(services.CaptureResult.Value.Prompt.Id, request.PromptId));
+    }
+
+    [Fact]
+    public async Task MetadataActionSavesUnsavedPromptBeforeOpeningEditor()
+    {
+        TestCaptureServices services = new()
+        {
+            CaptureResult = AppResult.Success(CreateCaptureResult(
+                IntentAssignment.Unsorted,
+                IntentReviewState.NeedsReview,
+                null)),
+        };
+        CaptureViewModel viewModel = new(services) { Body = "A prompt without a clear intent" };
+        PromptNavigationRequest? request = null;
+        viewModel.OpenSavedPromptRequested += (_, value) => request = value;
+
+        Assert.Equal("Save and edit metadata", viewModel.MetadataActionText);
+        await viewModel.ReviewMetadataCommand.ExecuteAsync();
+
+        Assert.Equal(1, services.CaptureCalls);
+        Assert.Equal(FocusTarget.PromptDetailMetadata, request?.FocusTarget);
+        Assert.Equal("Edit metadata", viewModel.MetadataActionText);
     }
 
     private static CapturePromptResult CreateCaptureResult(
