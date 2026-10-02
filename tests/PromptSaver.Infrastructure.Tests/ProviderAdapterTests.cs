@@ -47,7 +47,14 @@ public sealed class ProviderAdapterTests
                 using JsonDocument document = JsonDocument.Parse(json);
                 Assert.Equal("llama3.2", document.RootElement.GetProperty("model").GetString());
                 Assert.False(document.RootElement.GetProperty("stream").GetBoolean());
-                Assert.Equal("json", document.RootElement.GetProperty("format").GetString());
+                JsonElement format = document.RootElement.GetProperty("format");
+                Assert.Equal("object", format.GetProperty("type").GetString());
+                Assert.False(format.GetProperty("additionalProperties").GetBoolean());
+                Assert.Contains(
+                    "intent",
+                    format.GetProperty("required")
+                        .EnumerateArray()
+                        .Select(item => item.GetString()));
                 string prompt = document.RootElement.GetProperty("prompt").GetString()!;
                 using JsonDocument promptDocument = JsonDocument.Parse(prompt);
                 string instructions =
@@ -92,6 +99,14 @@ public sealed class ProviderAdapterTests
             {
                 Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
                 Assert.Equal("secret", request.Headers.Authorization?.Parameter);
+                using JsonDocument payload = JsonDocument.Parse(
+                    request.Content!.ReadAsStringAsync().GetAwaiter().GetResult());
+                Assert.Equal(
+                    "json_object",
+                    payload.RootElement
+                        .GetProperty("response_format")
+                        .GetProperty("type")
+                        .GetString());
                 return JsonResponse(
                     """
                     {"choices":[{"message":{"content":"{\"title\":\"Title\",\"intent\":\"Analyze logs\",\"skills\":[],\"entities\":[]}"}}]}
@@ -124,6 +139,45 @@ public sealed class ProviderAdapterTests
 
         Assert.True(result.IsSuccess, result.Error?.Message);
         Assert.Equal("Write release notes", result.Value.Intent);
+    }
+
+    [Fact]
+    public void ResponsePolicyExtractsTypedJsonObjectFromCommentary()
+    {
+        AppResult<ProviderEnrichmentResponse> result = ProviderResponsePolicy.Parse(
+            """
+            I used the requested schema:
+            {"title":"Release notes","intent":"Write release notes","skills":[],"entities":[]}
+            Let me know if you need anything else.
+            """,
+            "Test provider",
+            "test-model");
+
+        Assert.True(result.IsSuccess, result.Error?.Message);
+        Assert.Equal("Write release notes", result.Value.Intent);
+    }
+
+    [Fact]
+    public void ResponsePolicyRejectsUnknownContractFieldsAndShowsBoundedResponse()
+    {
+        string response =
+            "{\"title\":\"Release notes\",\"intent\":\"Write release notes\"," +
+            "\"skills\":[],\"entities\":[],\"commentary\":\"" +
+            new string('x', ProviderResponsePolicy.MaximumDiagnosticCharacters) +
+            "\"}";
+
+        AppResult<ProviderEnrichmentResponse> result = ProviderResponsePolicy.Parse(
+            response,
+            "Test provider",
+            "test-model");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("provider.response.invalid", result.Error?.Key);
+        Assert.Contains("Response excerpt:", result.Error?.Message, StringComparison.Ordinal);
+        Assert.EndsWith("...", result.Error?.Message, StringComparison.Ordinal);
+        Assert.True(
+            result.Error!.Message.Length <
+            ProviderResponsePolicy.MaximumDiagnosticCharacters + 120);
     }
 
     [Theory]

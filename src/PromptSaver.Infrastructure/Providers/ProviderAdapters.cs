@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using PromptSaver.Application;
 using PromptSaver.Application.Dtos;
 using PromptSaver.Application.Policies;
@@ -135,7 +136,7 @@ public sealed class OllamaEnrichmentProvider : IPromptEnrichmentProvider, IDispo
         {
             model = configuration.Model,
             stream = false,
-            format = "json",
+            format = ProviderResponseSchema.Value,
             prompt = ProviderPrompt.Create(request),
         };
         AppResult<JsonDocument> response = await _http.PostJsonAsync(
@@ -258,6 +259,10 @@ public sealed class OpenAiCompatibleEnrichmentProvider : IPromptEnrichmentProvid
                     content = ProviderPrompt.Create(request),
                 },
             },
+            response_format = new
+            {
+                type = "json_object",
+            },
             temperature = 0,
         };
         AuthenticationHeaderValue authorization = new("Bearer", credential.Value);
@@ -376,9 +381,15 @@ public sealed class OpenAiCompatibleEnrichmentProvider : IPromptEnrichmentProvid
 public static class ProviderResponsePolicy
 {
     public const int MaximumResponseBytes = 64 * 1024;
+    public const int MaximumDiagnosticCharacters = 500;
     public const int MaximumSkills = 20;
     public const int MaximumEntities = 30;
     public const int MaximumValueCharacters = 160;
+    private static readonly JsonSerializerOptions ContractOptions = new()
+    {
+        PropertyNameCaseInsensitive = false,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+    };
 
     public static AppResult<ProviderEnrichmentResponse> Parse(
         string json,
@@ -399,10 +410,14 @@ public static class ProviderResponsePolicy
                 throw new ProviderResponseException();
             }
 
-            string? title = OptionalString(root, "title", 200);
-            string? intent = OptionalString(root, "intent", MaximumValueCharacters);
-            ProposedSkillDto[] skills = ParseSkills(root);
-            ProposedEntityDto[] entities = ParseEntities(root);
+            ProviderMetadataContract contract =
+                JsonSerializer.Deserialize<ProviderMetadataContract>(
+                    root.GetRawText(),
+                    ContractOptions) ?? throw new ProviderResponseException();
+            string? title = OptionalString(contract.Title, 200);
+            string? intent = OptionalString(contract.Intent, MaximumValueCharacters);
+            ProposedSkillDto[] skills = ParseSkills(contract.Skills);
+            ProposedEntityDto[] entities = ParseEntities(contract.Entities);
             return AppResult.Success(
                 new ProviderEnrichmentResponse(
                     title,
@@ -417,7 +432,8 @@ public static class ProviderResponsePolicy
         {
             return Rejected(
                 "provider.response.invalid",
-                "The provider did not return a valid metadata JSON object.");
+                "The provider did not return a valid metadata JSON object. " +
+                $"Response excerpt: {CreateDiagnosticExcerpt(json)}");
         }
     }
 
@@ -427,7 +443,20 @@ public static class ProviderResponsePolicy
         int openingFence = candidate.IndexOf("```", StringComparison.Ordinal);
         if (openingFence < 0)
         {
-            return JsonDocument.Parse(candidate);
+            try
+            {
+                return JsonDocument.Parse(candidate);
+            }
+            catch (JsonException)
+            {
+                string? objectCandidate = FindJsonObject(candidate);
+                if (objectCandidate is null)
+                {
+                    throw;
+                }
+
+                return JsonDocument.Parse(objectCandidate);
+            }
         }
 
         int contentStart = candidate.IndexOf('\n', openingFence + 3);
@@ -449,45 +478,94 @@ public static class ProviderResponsePolicy
         return JsonDocument.Parse(candidate[(contentStart + 1)..closingFence].Trim());
     }
 
-    private static ProposedSkillDto[] ParseSkills(JsonElement root)
+    private static string? FindJsonObject(string response)
     {
-        if (!root.TryGetProperty("skills", out JsonElement values))
+        for (int start = 0; start < response.Length; start++)
+        {
+            if (response[start] != '{')
+            {
+                continue;
+            }
+
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+            for (int index = start; index < response.Length; index++)
+            {
+                char character = response[index];
+                if (inString)
+                {
+                    if (escaped)
+                    {
+                        escaped = false;
+                    }
+                    else if (character == '\\')
+                    {
+                        escaped = true;
+                    }
+                    else if (character == '"')
+                    {
+                        inString = false;
+                    }
+
+                    continue;
+                }
+
+                if (character == '"')
+                {
+                    inString = true;
+                }
+                else if (character == '{')
+                {
+                    depth++;
+                }
+                else if (character == '}' && --depth == 0)
+                {
+                    return response[start..(index + 1)];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static ProposedSkillDto[] ParseSkills(ProviderSkillContract[]? values)
+    {
+        if (values is null)
         {
             return [];
         }
 
-        if (values.ValueKind != JsonValueKind.Array ||
-            values.GetArrayLength() > MaximumSkills)
+        if (values.Length > MaximumSkills)
         {
             throw new ProviderResponseException();
         }
 
-        return values.EnumerateArray()
+        return values
             .Select(
                 item => new ProposedSkillDto(
-                    RequiredString(item, "name"),
-                    RequiredConfidence(item)))
+                    RequiredString(item.Name),
+                    RequiredConfidence(item.Confidence)))
             .ToArray();
     }
 
-    private static ProposedEntityDto[] ParseEntities(JsonElement root)
+    private static ProposedEntityDto[] ParseEntities(ProviderEntityContract[]? values)
     {
-        if (!root.TryGetProperty("entities", out JsonElement values))
+        if (values is null)
         {
             return [];
         }
 
-        if (values.ValueKind != JsonValueKind.Array ||
-            values.GetArrayLength() > MaximumEntities)
+        if (values.Length > MaximumEntities)
         {
             throw new ProviderResponseException();
         }
 
-        return values.EnumerateArray()
+        return values
             .Select(
                 item =>
                 {
-                    string typeValue = RequiredString(item, "type");
+                    string typeValue = RequiredString(item.Type);
                     if (!Enum.TryParse(typeValue, ignoreCase: true, out EntityType type) ||
                         !Enum.IsDefined(type))
                     {
@@ -495,55 +573,114 @@ public static class ProviderResponsePolicy
                     }
 
                     return new ProposedEntityDto(
-                        RequiredString(item, "name"),
+                        RequiredString(item.Name),
                         type,
-                        RequiredConfidence(item));
+                        RequiredConfidence(item.Confidence));
                 })
             .ToArray();
     }
 
-    private static string? OptionalString(JsonElement root, string name, int maximumCharacters)
+    private static string? OptionalString(string? value, int maximumCharacters)
     {
-        if (!root.TryGetProperty(name, out JsonElement value) ||
-            value.ValueKind == JsonValueKind.Null)
+        if (value is null)
         {
             return null;
         }
 
-        if (value.ValueKind != JsonValueKind.String)
+        if (string.IsNullOrWhiteSpace(value) || value.Length > maximumCharacters)
         {
             throw new ProviderResponseException();
         }
 
-        string? text = value.GetString();
-        if (string.IsNullOrWhiteSpace(text) || text.Length > maximumCharacters)
-        {
-            throw new ProviderResponseException();
-        }
-
-        return text;
+        return value;
     }
 
-    private static string RequiredString(JsonElement root, string name)
+    private static string RequiredString(string? value)
     {
-        string? value = OptionalString(root, name, MaximumValueCharacters);
-        return value ?? throw new ProviderResponseException();
+        return OptionalString(value, MaximumValueCharacters) ??
+            throw new ProviderResponseException();
     }
 
-    private static decimal RequiredConfidence(JsonElement root)
+    private static decimal RequiredConfidence(decimal? confidence)
     {
-        if (!root.TryGetProperty("confidence", out JsonElement value) ||
-            !value.TryGetDecimal(out decimal confidence) ||
-            confidence is < 0 or > 1)
+        if (confidence is null or < 0 or > 1)
         {
             throw new ProviderResponseException();
         }
 
-        return confidence;
+        return confidence.Value;
+    }
+
+    private static string CreateDiagnosticExcerpt(string response)
+    {
+        StringBuilder builder = new();
+        bool pendingSpace = false;
+        foreach (char character in response)
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                pendingSpace = builder.Length > 0;
+                continue;
+            }
+
+            if (char.IsControl(character))
+            {
+                continue;
+            }
+
+            if (pendingSpace)
+            {
+                builder.Append(' ');
+                pendingSpace = false;
+            }
+
+            builder.Append(character);
+        }
+
+        string normalized = builder.ToString();
+        return normalized.Length <= MaximumDiagnosticCharacters
+            ? normalized
+            : normalized[..MaximumDiagnosticCharacters] + "...";
     }
 
     private static AppResult<ProviderEnrichmentResponse> Rejected(string key, string message) =>
         ProviderErrors.Rejected<ProviderEnrichmentResponse>(key, message);
+
+    private sealed class ProviderMetadataContract
+    {
+        [JsonPropertyName("title")]
+        public string? Title { get; init; }
+
+        [JsonPropertyName("intent")]
+        public string? Intent { get; init; }
+
+        [JsonPropertyName("skills")]
+        public ProviderSkillContract[]? Skills { get; init; }
+
+        [JsonPropertyName("entities")]
+        public ProviderEntityContract[]? Entities { get; init; }
+    }
+
+    private sealed class ProviderSkillContract
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; init; }
+
+        [JsonPropertyName("confidence")]
+        public decimal? Confidence { get; init; }
+    }
+
+    private sealed class ProviderEntityContract
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; init; }
+
+        [JsonPropertyName("type")]
+        public string? Type { get; init; }
+
+        [JsonPropertyName("confidence")]
+        public decimal? Confidence { get; init; }
+    }
 }
 
 public sealed class EnrichmentScheduler : IEnrichPendingPrompts, IDisposable
@@ -890,6 +1027,80 @@ internal static class ProviderPrompt
         };
         return JsonSerializer.Serialize(content);
     }
+}
+
+internal static class ProviderResponseSchema
+{
+    public static JsonElement Value { get; } = JsonSerializer.SerializeToElement(
+        new
+        {
+            type = "object",
+            additionalProperties = false,
+            properties = new
+            {
+                title = new { type = new[] { "string", "null" }, maxLength = 200 },
+                intent = new
+                {
+                    type = new[] { "string", "null" },
+                    maxLength = ProviderResponsePolicy.MaximumValueCharacters,
+                },
+                skills = new
+                {
+                    type = "array",
+                    maxItems = ProviderResponsePolicy.MaximumSkills,
+                    items = new
+                    {
+                        type = "object",
+                        additionalProperties = false,
+                        properties = new
+                        {
+                            name = new
+                            {
+                                type = "string",
+                                maxLength = ProviderResponsePolicy.MaximumValueCharacters,
+                            },
+                            confidence = new { type = "number", minimum = 0, maximum = 1 },
+                        },
+                        required = new[] { "name", "confidence" },
+                    },
+                },
+                entities = new
+                {
+                    type = "array",
+                    maxItems = ProviderResponsePolicy.MaximumEntities,
+                    items = new
+                    {
+                        type = "object",
+                        additionalProperties = false,
+                        properties = new
+                        {
+                            name = new
+                            {
+                                type = "string",
+                                maxLength = ProviderResponsePolicy.MaximumValueCharacters,
+                            },
+                            type = new
+                            {
+                                type = "string",
+                                @enum = new[]
+                                {
+                                    "Person",
+                                    "Organization",
+                                    "Product",
+                                    "Technology",
+                                    "Location",
+                                    "Document",
+                                    "Other",
+                                },
+                            },
+                            confidence = new { type = "number", minimum = 0, maximum = 1 },
+                        },
+                        required = new[] { "name", "type", "confidence" },
+                    },
+                },
+            },
+            required = new[] { "title", "intent", "skills", "entities" },
+        });
 }
 
 internal static class ProviderErrors

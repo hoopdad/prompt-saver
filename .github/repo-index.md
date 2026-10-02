@@ -205,14 +205,14 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `ce7e66e`; current uncommitted work adds save-and-edit capture
-  metadata, directly applicable LLM intent suggestions, local CI, and release
-  version 0.1.13.
+- Based on commit `6964c07`; current work adds schema-constrained provider
+  responses, strict typed metadata validation, commentary JSON recovery,
+  bounded invalid-response diagnostics, and release version 0.1.14.
 - Current UI/provider reliability changes considered: compact top navigation
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, a fixed application status bar,
   Settings close navigation and saved-model reload, two-minute LLM requests,
-  strict provider JSON instructions with fenced-JSON recovery, nullable
+  native JSON response constraints with typed fenced/commentary recovery, nullable
   application results, save-and-edit capture metadata, directly applicable
   LLM intent suggestions, defensive provider errors, and SQLite hydration of
   provider/proposal IDs from relational keys.

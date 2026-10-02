@@ -31,9 +31,10 @@ available before the database and optional provider discovery finish. Use:
   repair, intent merge/reclassification, and diagnostics.
 - Settings reloads the saved provider model and shows save, connection, and
   LLM activity in the fixed status bar at the bottom of the window.
-- Provider prompts request a strict metadata JSON schema, while response
-  handling also accepts the common case where an LLM wraps valid JSON in a
-  Markdown code fence.
+- Provider requests use native JSON response constraints where supported and
+  validate replies against a strict typed metadata contract. Response handling
+  recovers valid JSON from Markdown fences or surrounding commentary; rejected
+  replies show a bounded response excerpt for troubleshooting.
 - Capture can save and open metadata editing in one action. LLM intent
   suggestions populate an editable intent field and can be saved directly,
   including replacing an Unsorted assignment.
