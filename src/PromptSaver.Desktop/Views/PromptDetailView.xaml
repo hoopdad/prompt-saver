@@ -70,7 +70,17 @@
                         <Button Content="Edit metadata"
                                 Command="{Binding EditMetadataCommand}"
                                 automation:AutomationProperties.AutomationId="EditMetadataButton" />
+                        <Button Content="Ask LLM for intent"
+                                Command="{Binding QueryIntentCommand}"
+                                automation:AutomationProperties.AutomationId="QueryIntentButton"
+                                automation:AutomationProperties.HelpText="Ask the enabled LLM provider to suggest an intent for this saved prompt." />
                     </WrapPanel>
+                    <TextBlock Margin="0,6,0,0"
+                               FontWeight="SemiBold"
+                               Text="{Binding LlmIntentSuggestion, StringFormat=LLM suggestion: {0}}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding HasLlmIntentSuggestion, Converter={StaticResource BooleanToVisibilityConverter}}"
+                               automation:AutomationProperties.AutomationId="LlmIntentSuggestion" />
                     <StackPanel Visibility="{Binding IsMetadataEditing, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Margin="0,6,0,0" Text="Skills (comma-separated)" />
                         <TextBox Text="{Binding SkillsText, UpdateSourceTrigger=PropertyChanged}"

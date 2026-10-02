@@ -202,7 +202,8 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `2f71d24`
+- Based on commit `b62a78f`; prompt detail now supports an explicit,
+  suggestion-only LLM intent re-query for saved prompts.
 - Current UI/provider reliability changes considered: compact top navigation
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, nullable application results,

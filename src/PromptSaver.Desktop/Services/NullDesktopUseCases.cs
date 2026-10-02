@@ -21,6 +21,7 @@ public class NullDesktopUseCases :
     IListIntents,
     IMergeIntents,
     IManageMetadata,
+    IQueryPromptIntent,
     IConfigureProvider,
     IDiscoverLocalOllama,
     ICheckProviderHealth,
@@ -120,6 +121,11 @@ public class NullDesktopUseCases :
         ManageMetadataCommand command,
         CancellationToken cancellationToken) =>
         Task.FromResult(AppResult.Failure<PromptDetailsDto>(StorageNotReady));
+
+    Task<AppResult<PromptIntentSuggestionDto>> IQueryPromptIntent.ExecuteAsync(
+        QueryPromptIntentCommand command,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(AppResult.Failure<PromptIntentSuggestionDto>(StorageNotReady));
 
     Task<AppResult<ProviderConfigurationDto>> IConfigureProvider.ExecuteAsync(
         ConfigureProviderCommand command,

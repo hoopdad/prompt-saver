@@ -59,6 +59,8 @@ connection tests use the configured provider endpoint and can be cancelled.
 - Prompt detail supports intent review/reclassification, and Settings can
   merge duplicate intents after showing the number of prompts that will be
   reclassified.
+- Prompt detail can re-query the enabled LLM provider for an intent suggestion
+  without automatically changing the saved intent.
 - Prompt, metadata, intent candidate, and FTS changes commit in one SQLite
   transaction.
 - Backups are created and restored from the application's `Backups` directory.

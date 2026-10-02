@@ -6,7 +6,10 @@ using PromptSaver.Application.UseCases;
 
 namespace PromptSaver.Infrastructure.Providers;
 
-public sealed class MultiProviderEnrichmentService : IEnrichPendingPrompts, IDisposable
+public sealed class MultiProviderEnrichmentService :
+    IEnrichPendingPrompts,
+    IQueryPromptIntent,
+    IDisposable
 {
     private readonly SemaphoreSlim _worker = new(1, 1);
     private readonly IEnrichmentWorkStore _work;
@@ -137,6 +140,70 @@ public sealed class MultiProviderEnrichmentService : IEnrichPendingPrompts, IDis
         finally
         {
             _worker.Release();
+        }
+    }
+
+    public async Task<AppResult<PromptIntentSuggestionDto>> ExecuteAsync(
+        QueryPromptIntentCommand command,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            AppResult<ProviderConfigurationDto?> configured =
+                await _configurations.GetEnabledAsync(cancellationToken);
+            if (!configured.IsSuccess)
+            {
+                return AppResult.Failure<PromptIntentSuggestionDto>(configured.Error!);
+            }
+
+            if (configured.Value is null ||
+                !_providers.TryGetValue(
+                    configured.Value.Kind,
+                    out IPromptEnrichmentProvider? provider))
+            {
+                return AppResult.Failure<PromptIntentSuggestionDto>(
+                    new AppError(
+                        AppErrorCode.ProviderUnavailable,
+                        "provider.intent.unavailable",
+                        "Enable an LLM provider in Settings before asking for an intent.",
+                        true));
+            }
+
+            AppResult<string> body =
+                await _prompts.GetBodyAsync(command.PromptId, cancellationToken);
+            if (!body.IsSuccess)
+            {
+                return AppResult.Failure<PromptIntentSuggestionDto>(body.Error!);
+            }
+
+            AppResult<ProviderEnrichmentResponse> enriched = await provider.EnrichAsync(
+                configured.Value,
+                ProviderPayloadPolicy.CreateRequest(command.PromptId, body.Value),
+                cancellationToken);
+            if (!enriched.IsSuccess)
+            {
+                return AppResult.Failure<PromptIntentSuggestionDto>(enriched.Error!);
+            }
+
+            if (string.IsNullOrWhiteSpace(enriched.Value.Intent))
+            {
+                return AppResult.Failure<PromptIntentSuggestionDto>(
+                    new AppError(
+                        AppErrorCode.ProviderRejected,
+                        "provider.intent.missing",
+                        "The LLM did not return an intent. Try again or review the provider model.",
+                        true));
+            }
+
+            return AppResult.Success(
+                new PromptIntentSuggestionDto(
+                    enriched.Value.Intent.Trim(),
+                    enriched.Value.ProviderName,
+                    enriched.Value.Model));
+        }
+        catch (OperationCanceledException)
+        {
+            return ProviderErrors.Cancelled<PromptIntentSuggestionDto>();
         }
     }
 

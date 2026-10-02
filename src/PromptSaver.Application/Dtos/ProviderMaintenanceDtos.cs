@@ -49,6 +49,13 @@ public sealed record ProviderEnrichmentResponse(
     string ProviderName,
     string Model);
 
+public sealed record QueryPromptIntentCommand(PromptId PromptId);
+
+public sealed record PromptIntentSuggestionDto(
+    string Intent,
+    string ProviderName,
+    string Model);
+
 public enum EnrichmentProposalReviewAction
 {
     Accept,

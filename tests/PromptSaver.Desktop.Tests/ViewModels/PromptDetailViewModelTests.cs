@@ -32,6 +32,12 @@ public sealed class PromptDetailViewModelTests
         Assert.Equal(EntityType.Organization, services.LastMetadata.Entities[1].Type);
         Assert.False(viewModel.IsMetadataEditing);
         Assert.Equal("Metadata saved", viewModel.StatusMessage);
+
+        await viewModel.QueryIntentCommand.ExecuteAsync();
+
+        Assert.Equal(services.Prompt.Id, services.LastIntentQuery?.PromptId);
+        Assert.Equal("Draft release notes", viewModel.LlmIntentSuggestion);
+        Assert.Contains("Test provider", viewModel.StatusMessage, StringComparison.Ordinal);
     }
 
     private sealed class DetailServices :
@@ -41,13 +47,16 @@ public sealed class PromptDetailViewModelTests
         IDuplicatePrompt,
         IDeletePrompt,
         IReviewIntentAssignment,
-        IManageMetadata
+        IManageMetadata,
+        IQueryPromptIntent
     {
         public PromptDetailsDto Prompt { get; private set; } = CreatePrompt();
 
         public ReviewIntentAssignmentCommand? LastReview { get; private set; }
 
         public ManageMetadataCommand? LastMetadata { get; private set; }
+
+        public QueryPromptIntentCommand? LastIntentQuery { get; private set; }
 
         public Task<AppResult<PromptDetailsDto>> ExecuteAsync(
             PromptId promptId,
@@ -115,6 +124,19 @@ public sealed class PromptDetailViewModelTests
                 Version = Prompt.Version + 1,
             };
             return Task.FromResult(AppResult.Success(Prompt));
+        }
+
+        public Task<AppResult<PromptIntentSuggestionDto>> ExecuteAsync(
+            QueryPromptIntentCommand command,
+            CancellationToken cancellationToken)
+        {
+            LastIntentQuery = command;
+            return Task.FromResult(
+                AppResult.Success(
+                    new PromptIntentSuggestionDto(
+                        "Draft release notes",
+                        "Test provider",
+                        "test-model")));
         }
 
         private static PromptDetailsDto CreatePrompt() =>

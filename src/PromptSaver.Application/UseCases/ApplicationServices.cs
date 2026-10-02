@@ -26,6 +26,7 @@ public sealed class PromptApplicationService :
     IMergeIntents,
     IListIntents,
     IManageMetadata,
+    IQueryPromptIntent,
     ICreateBackup,
     IRestoreBackup,
     IRebuildSearchIndex,
@@ -368,6 +369,19 @@ public sealed class PromptApplicationService :
         SearchPromptsQuery query,
         CancellationToken cancellationToken) =>
         _search.SearchAsync(query, cancellationToken);
+
+    public Task<AppResult<PromptIntentSuggestionDto>> ExecuteAsync(
+        QueryPromptIntentCommand command,
+        CancellationToken cancellationToken) =>
+        _enrichment is IQueryPromptIntent query
+            ? query.ExecuteAsync(command, cancellationToken)
+            : Task.FromResult(
+                AppResult.Failure<PromptIntentSuggestionDto>(
+                    new AppError(
+                        AppErrorCode.ProviderUnavailable,
+                        "provider.intent.unavailable",
+                        "Enable an LLM provider in Settings before asking for an intent.",
+                        true)));
 
     public async Task<AppResult<PromptDetailsDto>> ExecuteAsync(
         AssignIntentCommand command,

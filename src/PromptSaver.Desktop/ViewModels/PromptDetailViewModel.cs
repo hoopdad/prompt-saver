@@ -15,6 +15,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
     private readonly IDeletePrompt _deletePrompt;
     private readonly IReviewIntentAssignment _reviewIntent;
     private readonly IManageMetadata _manageMetadata;
+    private readonly IQueryPromptIntent _queryPromptIntent;
     private PromptDetailsDto? _prompt;
     private string _body = string.Empty;
     private string? _title;
@@ -24,6 +25,8 @@ public sealed class PromptDetailViewModel : ViewModelBase
     private string _skillsText = string.Empty;
     private string _entitiesText = string.Empty;
     private bool _isMetadataEditing;
+    private bool _isQueryingIntent;
+    private string _llmIntentSuggestion = string.Empty;
     private FocusRequest? _focusRequest;
     private long _focusSequence;
 
@@ -36,6 +39,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
         _deletePrompt = Require<IDeletePrompt>(services);
         _reviewIntent = Require<IReviewIntentAssignment>(services);
         _manageMetadata = Require<IManageMetadata>(services);
+        _queryPromptIntent = Require<IQueryPromptIntent>(services);
         SaveCommand = new AsyncDelegateCommand(SaveAsync, () => HasUnsavedChanges);
         CopyCommand = new AsyncDelegateCommand(CopyAsync, () => Prompt is not null);
         DuplicateCommand = new AsyncDelegateCommand(DuplicateAsync, () => Prompt is not null);
@@ -56,6 +60,9 @@ public sealed class PromptDetailViewModel : ViewModelBase
             SaveMetadataAsync,
             () => Prompt is not null && IsMetadataEditing);
         CancelMetadataCommand = new DelegateCommand(CancelMetadataEdit, () => IsMetadataEditing);
+        QueryIntentCommand = new AsyncDelegateCommand(
+            QueryIntentAsync,
+            () => Prompt is not null && !HasUnsavedChanges && !IsQueryingIntent);
     }
 
     public PromptDetailsDto? Prompt
@@ -80,6 +87,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveCommand.RaiseCanExecuteChanged();
+                QueryIntentCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -93,6 +101,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 SaveCommand.RaiseCanExecuteChanged();
+                QueryIntentCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -146,6 +155,32 @@ public sealed class PromptDetailViewModel : ViewModelBase
         }
     }
 
+    public bool IsQueryingIntent
+    {
+        get => _isQueryingIntent;
+        private set
+        {
+            if (SetProperty(ref _isQueryingIntent, value))
+            {
+                QueryIntentCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string LlmIntentSuggestion
+    {
+        get => _llmIntentSuggestion;
+        private set
+        {
+            if (SetProperty(ref _llmIntentSuggestion, value))
+            {
+                OnPropertyChanged(nameof(HasLlmIntentSuggestion));
+            }
+        }
+    }
+
+    public bool HasLlmIntentSuggestion => !string.IsNullOrWhiteSpace(LlmIntentSuggestion);
+
     public bool HasUnsavedChanges =>
         Prompt is not null && (Body != Prompt.Body || Title != Prompt.Title);
 
@@ -198,6 +233,8 @@ public sealed class PromptDetailViewModel : ViewModelBase
     public AsyncDelegateCommand SaveMetadataCommand { get; }
 
     public DelegateCommand CancelMetadataCommand { get; }
+
+    public AsyncDelegateCommand QueryIntentCommand { get; }
 
     public async Task LoadAsync(PromptId promptId)
     {
@@ -441,6 +478,38 @@ public sealed class PromptDetailViewModel : ViewModelBase
         FocusRequest = new FocusRequest(FocusTarget.PromptDetailMetadata, ++_focusSequence);
     }
 
+    private async Task QueryIntentAsync()
+    {
+        if (Prompt is null || HasUnsavedChanges)
+        {
+            return;
+        }
+
+        IsQueryingIntent = true;
+        LlmIntentSuggestion = string.Empty;
+        StatusMessage = "Asking the LLM for an intent...";
+        try
+        {
+            AppResult<PromptIntentSuggestionDto> result = await _queryPromptIntent.ExecuteAsync(
+                new QueryPromptIntentCommand(Prompt.Id),
+                CancellationToken.None);
+            if (result.IsSuccess)
+            {
+                LlmIntentSuggestion = result.Value.Intent;
+                StatusMessage =
+                    $"LLM suggestion from {result.Value.ProviderName} ({result.Value.Model}): {result.Value.Intent}";
+            }
+            else
+            {
+                StatusMessage = $"The LLM could not suggest an intent. {result.Error?.Message}";
+            }
+        }
+        finally
+        {
+            IsQueryingIntent = false;
+        }
+    }
+
     private void ApplyPrompt(PromptDetailsDto prompt)
     {
         Prompt = prompt;
@@ -451,6 +520,7 @@ public sealed class PromptDetailViewModel : ViewModelBase
         OnPropertyChanged(nameof(Body));
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(HasUnsavedChanges));
+        QueryIntentCommand.RaiseCanExecuteChanged();
         ResetMetadataText(prompt);
         KeepCurrentIntentCommand.RaiseCanExecuteChanged();
         EditMetadataCommand.RaiseCanExecuteChanged();

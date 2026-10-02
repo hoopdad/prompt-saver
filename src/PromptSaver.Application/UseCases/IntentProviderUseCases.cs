@@ -68,6 +68,13 @@ public interface IEnrichPendingPrompts
     Task<AppResult<int>> ExecuteAsync(CancellationToken cancellationToken);
 }
 
+public interface IQueryPromptIntent
+{
+    Task<AppResult<PromptIntentSuggestionDto>> ExecuteAsync(
+        QueryPromptIntentCommand command,
+        CancellationToken cancellationToken);
+}
+
 public interface ICreateBackup
 {
     Task<AppResult<BackupInfoDto>> ExecuteAsync(CancellationToken cancellationToken);
