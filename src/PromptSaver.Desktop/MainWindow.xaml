@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:automation="clr-namespace:System.Windows.Automation;assembly=PresentationCore"
         Title="Prompt Saver"
+        Icon="pack://application:,,,/Resources/AppIcon.ico"
         Width="1000"
         Height="720"
         MinWidth="480"
