@@ -26,9 +26,10 @@ public sealed class ShellViewModelTests
     }
 
     [Fact]
-    public void GlobalNavigationRequestsExpectedFocus()
+    public async Task GlobalNavigationRequestsExpectedFocusAndClearsPriorPrompt()
     {
         ShellViewModel shell = DesktopComposition.CreateShell(new NullDesktopUseCases());
+        shell.Capture.Body = "Prior prompt";
 
         shell.ShowLibrary(focusSearch: true);
         Assert.IsType<LibraryViewModel>(shell.CurrentPage);
@@ -42,9 +43,22 @@ public sealed class ShellViewModelTests
         Assert.IsType<LibraryViewModel>(shell.CurrentPage);
         Assert.Equal(FocusTarget.LibraryResults, shell.FocusRequest?.Target);
 
-        shell.ShowNewPrompt();
+        await shell.NewCommand.ExecuteAsync();
         Assert.IsType<CaptureViewModel>(shell.CurrentPage);
+        Assert.Equal(string.Empty, shell.Capture.Body);
+        Assert.Equal(CaptureState.Empty, shell.Capture.State);
         Assert.Equal(FocusTarget.PromptEditor, shell.FocusRequest?.Target);
+    }
+
+    [Fact]
+    public void WindowTitleIncludesDesktopAssemblyVersion()
+    {
+        ShellViewModel shell = DesktopComposition.CreateShell(new NullDesktopUseCases());
+        Version version = typeof(ShellViewModel).Assembly.GetName().Version!;
+
+        Assert.Equal(
+            $"Prompt Saver v{version.Major}.{version.Minor}.{version.Build}",
+            shell.WindowTitle);
     }
 
     [Fact]

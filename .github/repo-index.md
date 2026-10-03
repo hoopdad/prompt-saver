@@ -205,9 +205,10 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `6964c07`; current work adds schema-constrained provider
+- Based on commit `b4ce1a1`; current work adds schema-constrained provider
   responses, strict typed metadata validation, commentary JSON recovery,
-  bounded invalid-response diagnostics, and release version 0.1.14.
+  bounded invalid-response diagnostics, a shared New Prompt reset path,
+  versioned window titles, and release version 0.1.15.
 - Current UI/provider reliability changes considered: compact top navigation
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, a fixed application status bar,

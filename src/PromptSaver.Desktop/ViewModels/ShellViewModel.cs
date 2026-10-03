@@ -31,7 +31,7 @@ public sealed class ShellViewModel : ViewModelBase
         _previousPage = capture;
         _previousPageKind = ShellPage.Capture;
         _optionalInitialization = optionalInitialization ?? (_ => Task.CompletedTask);
-        NewCommand = new DelegateCommand(ShowNewPrompt);
+        NewCommand = new AsyncDelegateCommand(ShowNewPromptAsync);
         LibraryCommand = new DelegateCommand(() => ShowLibrary(false));
         SearchLibraryCommand = new DelegateCommand(() => ShowLibrary(true));
         SettingsCommand = new AsyncDelegateCommand(ShowSettingsAsync);
@@ -109,6 +109,8 @@ public sealed class ShellViewModel : ViewModelBase
 
     public string ThemeToggleText => IsDarkTheme ? "Light mode" : "Dark mode";
 
+    public string WindowTitle { get; } = $"Prompt Saver v{GetApplicationVersion()}";
+
     public int ZoomPercentage
     {
         get => _zoomPercentage;
@@ -136,7 +138,7 @@ public sealed class ShellViewModel : ViewModelBase
             _ => "Ready",
         };
 
-    public DelegateCommand NewCommand { get; }
+    public AsyncDelegateCommand NewCommand { get; }
 
     public DelegateCommand LibraryCommand { get; }
 
@@ -164,10 +166,11 @@ public sealed class ShellViewModel : ViewModelBase
         await optionalWork;
     }
 
-    public void ShowNewPrompt()
+    public async Task ShowNewPromptAsync()
     {
         CurrentPage = Capture;
         CurrentPageKind = ShellPage.Capture;
+        await Capture.StartNewAsync();
         RequestFocus(FocusTarget.PromptEditor);
     }
 
@@ -279,5 +282,13 @@ public sealed class ShellViewModel : ViewModelBase
         {
             OnPropertyChanged(nameof(StatusMessage));
         }
+    }
+
+    private static string GetApplicationVersion()
+    {
+        Version? version = typeof(ShellViewModel).Assembly.GetName().Version;
+        return version is null
+            ? "0.0.0"
+            : $"{version.Major}.{version.Minor}.{version.Build}";
     }
 }
