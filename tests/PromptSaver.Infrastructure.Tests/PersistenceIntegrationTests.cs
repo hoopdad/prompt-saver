@@ -244,6 +244,100 @@ public sealed class PersistenceIntegrationTests
     }
 
     [Fact]
+    public async Task SearchSortsTheFullResultSetBeforePaging()
+    {
+        using TemporaryStorage storage = new();
+        StorageServices services = storage.CreateServices();
+        DateTimeOffset now = AtNoon();
+        Intent alphaIntent = Intent.Create(NewIntentId(), "Alpha intent", IntentSource.User, now);
+        Intent zuluIntent = Intent.Create(NewIntentId(), "Zulu intent", IntentSource.User, now);
+        Prompt first = CreatePrompt("Bravo body", zuluIntent.Id, now, title: "Charlie");
+        Prompt second = CreatePrompt(
+            "Alpha body",
+            alphaIntent.Id,
+            now.AddMinutes(1),
+            title: "Bravo");
+        Prompt third = CreatePrompt(
+            "Charlie body",
+            alphaIntent.Id,
+            now.AddMinutes(2),
+            title: "Alpha");
+        second.RecordSuccessfulCopy(now.AddMinutes(3));
+        third.RecordSuccessfulCopy(now.AddMinutes(3));
+        third.RecordSuccessfulCopy(now.AddMinutes(4));
+
+        await using (IAppUnitOfWork unit = await BeginAsync(services))
+        {
+            await unit.Intents.AddAsync(alphaIntent, TestContext.Current.CancellationToken);
+            await unit.Intents.AddAsync(zuluIntent, TestContext.Current.CancellationToken);
+            await unit.Prompts.AddAsync(first, TestContext.Current.CancellationToken);
+            await unit.Prompts.AddAsync(second, TestContext.Current.CancellationToken);
+            await unit.Prompts.AddAsync(third, TestContext.Current.CancellationToken);
+            Assert.True((await unit.CommitAsync(TestContext.Current.CancellationToken)).IsSuccess);
+        }
+
+        AppResult<SearchPageDto<PromptSummaryDto>> intentPage =
+            await services.Search.SearchAsync(
+                new SearchPromptsQuery(
+                    string.Empty,
+                    2,
+                    1,
+                    sortColumn: PromptSortColumn.Intent),
+                TestContext.Current.CancellationToken);
+        Assert.True(intentPage.IsSuccess, intentPage.Error?.Message);
+        Assert.Equal("Alpha intent", Assert.Single(intentPage.Value.Items).Intent.CanonicalName);
+
+        AppResult<SearchPageDto<PromptSummaryDto>> titlePage =
+            await services.Search.SearchAsync(
+                new SearchPromptsQuery(
+                    string.Empty,
+                    1,
+                    3,
+                    sortColumn: PromptSortColumn.Title),
+                TestContext.Current.CancellationToken);
+        Assert.Equal(
+            ["Alpha", "Bravo", "Charlie"],
+            titlePage.Value.Items.Select(item => item.Title));
+
+        AppResult<SearchPageDto<PromptSummaryDto>> promptPage =
+            await services.Search.SearchAsync(
+                new SearchPromptsQuery(
+                    string.Empty,
+                    1,
+                    3,
+                    sortColumn: PromptSortColumn.Prompt,
+                    sortDirection: PromptSortDirection.Descending),
+                TestContext.Current.CancellationToken);
+        Assert.Equal(
+            ["Charlie body", "Bravo body", "Alpha body"],
+            promptPage.Value.Items.Select(item => item.BodyPreview));
+
+        AppResult<SearchPageDto<PromptSummaryDto>> modifiedPage =
+            await services.Search.SearchAsync(
+                new SearchPromptsQuery(
+                    string.Empty,
+                    1,
+                    3,
+                    sortColumn: PromptSortColumn.Modified,
+                    sortDirection: PromptSortDirection.Descending),
+                TestContext.Current.CancellationToken);
+        Assert.Equal(
+            [third.Id, second.Id, first.Id],
+            modifiedPage.Value.Items.Select(item => item.Id));
+
+        AppResult<SearchPageDto<PromptSummaryDto>> copiesPage =
+            await services.Search.SearchAsync(
+                new SearchPromptsQuery(
+                    string.Empty,
+                    1,
+                    3,
+                    sortColumn: PromptSortColumn.Copies,
+                    sortDirection: PromptSortDirection.Descending),
+                TestContext.Current.CancellationToken);
+        Assert.Equal([2L, 1L, 0L], copiesPage.Value.Items.Select(item => item.CopyCount));
+    }
+
+    [Fact]
     public async Task EnrichmentClaimsAreAtomicAndProposalSaveIsIdempotent()
     {
         using TemporaryStorage storage = new();
@@ -528,11 +622,12 @@ public sealed class PersistenceIntegrationTests
         string body,
         IntentId intentId,
         DateTimeOffset createdAtUtc,
-        MetadataStatus metadataStatus = MetadataStatus.LocalComplete) =>
+        MetadataStatus metadataStatus = MetadataStatus.LocalComplete,
+        string title = "Test prompt") =>
         Prompt.Create(
             new PromptId(Guid.CreateVersion7()),
             PromptBody.Create(body),
-            PromptTitle.Create("Test prompt"),
+            PromptTitle.Create(title),
             TitleSource.User,
             createdAtUtc,
             intentId,

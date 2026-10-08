@@ -64,7 +64,37 @@ public sealed class LibraryViewModelTests
         Assert.NotNull(services.LastQuery);
         Assert.Equal(string.Empty, services.LastQuery.Text);
         Assert.False(services.LastQuery.NeedsReviewOnly);
+        Assert.Equal(20, services.LastQuery.PageSize);
+        Assert.Equal(PromptSortColumn.Intent, services.LastQuery.SortColumn);
+        Assert.Equal(PromptSortDirection.Ascending, services.LastQuery.SortDirection);
         Assert.Equal(FocusTarget.LibraryResults, viewModel.FocusRequest?.Target);
+    }
+
+    [Fact]
+    public async Task SortPagingAndPageSizeAreAppliedToSearch()
+    {
+        LibraryServices services = new() { TotalCount = 45 };
+        LibraryViewModel viewModel = new(services);
+
+        await viewModel.SearchAsync();
+        Assert.Equal("Page 1 of 3", viewModel.PageStatus);
+        Assert.True(viewModel.NextPageCommand.CanExecute(null));
+
+        await viewModel.SortAsync(PromptSortColumn.Title);
+        Assert.Equal(PromptSortDirection.Ascending, services.LastQuery?.SortDirection);
+
+        await viewModel.SortAsync(PromptSortColumn.Title);
+        Assert.Equal(PromptSortDirection.Descending, services.LastQuery?.SortDirection);
+
+        viewModel.PageSizeText = "25";
+        await viewModel.ApplyPageSizeCommand.ExecuteAsync();
+        Assert.Equal(25, services.LastQuery?.PageSize);
+        Assert.Equal("Page 1 of 2", viewModel.PageStatus);
+
+        await viewModel.NextPageCommand.ExecuteAsync();
+        Assert.Equal(2, services.LastQuery?.PageNumber);
+        Assert.False(viewModel.NextPageCommand.CanExecute(null));
+        Assert.True(viewModel.PreviousPageCommand.CanExecute(null));
     }
 
     private static PromptSummaryDto CreateSummary()
@@ -97,6 +127,8 @@ public sealed class LibraryViewModelTests
 
         public SearchPromptsQuery? LastQuery { get; private set; }
 
+        public long TotalCount { get; init; }
+
         public Task<AppResult<SearchPageDto<PromptSummaryDto>>> ExecuteAsync(
             SearchPromptsQuery query,
             CancellationToken cancellationToken)
@@ -104,7 +136,11 @@ public sealed class LibraryViewModelTests
             LastQuery = query;
             return Task.FromResult(
                 AppResult.Success(
-                    new SearchPageDto<PromptSummaryDto>([], query.PageNumber, query.PageSize, 0)));
+                    new SearchPageDto<PromptSummaryDto>(
+                        [],
+                        query.PageNumber,
+                        query.PageSize,
+                        TotalCount)));
         }
 
         Task<AppResult> ICopyPrompt.ExecuteAsync(

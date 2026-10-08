@@ -59,76 +59,125 @@
                     automation:AutomationProperties.AutomationId="ClearSearchButton" />
         </WrapPanel>
 
-        <ListBox x:Name="LibraryResults"
-                 Grid.Row="3"
-                 ItemsSource="{Binding Results}"
-                 SelectedItem="{Binding SelectedPrompt}"
-                 ScrollViewer.CanContentScroll="True"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 HorizontalContentAlignment="Stretch"
-                 VirtualizingPanel.IsVirtualizing="True"
-                 VirtualizingPanel.VirtualizationMode="Recycling"
-                 automation:AutomationProperties.AutomationId="LibraryResults"
-                 automation:AutomationProperties.Name="Prompt search results">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <VirtualizingStackPanel />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Border Margin="0,4"
-                            Padding="12"
-                            Background="{DynamicResource SurfaceBrush}"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="8">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2*" />
-                                    <ColumnDefinition Width="3*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Margin="0,0,10,0"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource AccentBrush}"
-                                           Text="{Binding Intent.CanonicalName}"
-                                           TextTrimming="CharacterEllipsis"
-                                           TextWrapping="NoWrap" />
-                                <TextBlock Grid.Column="1"
-                                           Foreground="{DynamicResource TextBrush}"
-                                           Text="{Binding BodyPreview}"
-                                           TextTrimming="CharacterEllipsis"
-                                           TextWrapping="NoWrap" />
-                            </Grid>
-                            <WrapPanel Grid.Row="1" HorizontalAlignment="Right">
-                                <Button Content="Open prompt"
-                                        Command="{Binding DataContext.OpenPromptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+        <DataGrid x:Name="LibraryResults"
+                  Grid.Row="3"
+                  Margin="4"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserReorderColumns="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  IsReadOnly="True"
+                  ItemsSource="{Binding Results}"
+                  SelectedItem="{Binding SelectedPrompt}"
+                  Sorting="OnSorting"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  RowHeaderWidth="0"
+                  RowHeight="42"
+                  Background="{DynamicResource SurfaceBrush}"
+                  Foreground="{DynamicResource TextBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  automation:AutomationProperties.AutomationId="LibraryResults"
+                  automation:AutomationProperties.Name="Prompt search results">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Intent"
+                                    SortMemberPath="Intent"
+                                    Width="1.4*"
+                                    Binding="{Binding Intent.CanonicalName}" />
+                <DataGridTextColumn Header="Title"
+                                    SortMemberPath="Title"
+                                    Width="1.4*"
+                                    Binding="{Binding Title}" />
+                <DataGridTemplateColumn Header="Prompt"
+                                        SortMemberPath="Prompt"
+                                        Width="2.5*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{Binding BodyPreview}"
+                                       TextTrimming="CharacterEllipsis"
+                                       TextWrapping="NoWrap" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Modified"
+                                    SortMemberPath="Modified"
+                                    Width="Auto"
+                                    Binding="{Binding UpdatedAtUtc, StringFormat={}{0:g}}" />
+                <DataGridTextColumn Header="Copies"
+                                    SortMemberPath="Copies"
+                                    Width="Auto"
+                                    Binding="{Binding CopyCount, StringFormat=N0}" />
+                <DataGridTemplateColumn Header="Actions"
+                                        CanUserSort="False"
+                                        Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Open"
+                                        Command="{Binding DataContext.OpenPromptCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}"
                                         automation:AutomationProperties.Name="Open prompt"
                                         automation:AutomationProperties.AutomationId="OpenPromptButton" />
-                                <Button Content="Copy prompt"
-                                        Command="{Binding DataContext.CopyPromptCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                <Button Content="Copy"
+                                        Command="{Binding DataContext.CopyPromptCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}"
                                         automation:AutomationProperties.Name="Copy prompt"
                                         automation:AutomationProperties.AutomationId="CopyLibraryPromptButton" />
-                                <Button Content="More options"
-                                        Command="{Binding DataContext.MoreOptionsCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                <Button Content="More"
+                                        Command="{Binding DataContext.MoreOptionsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}"
                                         automation:AutomationProperties.Name="More options for prompt"
                                         automation:AutomationProperties.AutomationId="PromptMoreButton" />
-                            </WrapPanel>
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
 
         <StackPanel Grid.Row="4">
+            <Grid Margin="0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="4"
+                           VerticalAlignment="Center"
+                           Text="Rows per page" />
+                <TextBox Grid.Column="1"
+                         Width="54"
+                         Text="{Binding PageSizeText, UpdateSourceTrigger=PropertyChanged}"
+                         automation:AutomationProperties.AutomationId="LibraryPageSize"
+                         automation:AutomationProperties.Name="Rows per page" />
+                <Button Grid.Column="2"
+                        HorizontalAlignment="Left"
+                        Content="Apply"
+                        Command="{Binding ApplyPageSizeCommand}"
+                        automation:AutomationProperties.AutomationId="ApplyLibraryPageSizeButton" />
+                <Button Grid.Column="3"
+                        Content="Previous"
+                        Command="{Binding PreviousPageCommand}"
+                        automation:AutomationProperties.AutomationId="PreviousLibraryPageButton" />
+                <TextBlock Grid.Column="4"
+                           Margin="10,4"
+                           VerticalAlignment="Center"
+                           Text="{Binding PageStatus}"
+                           automation:AutomationProperties.AutomationId="LibraryPageStatus" />
+                <Button Grid.Column="5"
+                        Content="Next"
+                        Command="{Binding NextPageCommand}"
+                        automation:AutomationProperties.AutomationId="NextLibraryPageButton" />
+            </Grid>
             <Border Margin="3"
                     Padding="10"
                     BorderBrush="{DynamicResource BorderBrush}"

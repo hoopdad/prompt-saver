@@ -80,7 +80,9 @@ public sealed record SearchPromptsQuery
         IntentId? intentId = null,
         bool needsReviewOnly = false,
         DateTimeOffset? createdFromUtc = null,
-        DateTimeOffset? createdToUtc = null)
+        DateTimeOffset? createdToUtc = null,
+        PromptSortColumn sortColumn = PromptSortColumn.Intent,
+        PromptSortDirection sortDirection = PromptSortDirection.Ascending)
     {
         if (pageNumber < 1)
         {
@@ -98,6 +100,22 @@ public sealed record SearchPromptsQuery
                 nameof(pageSize));
         }
 
+        if (!Enum.IsDefined(sortColumn))
+        {
+            throw new AppContractException(
+                "search.sort_column.invalid",
+                "Sort column is invalid.",
+                nameof(sortColumn));
+        }
+
+        if (!Enum.IsDefined(sortDirection))
+        {
+            throw new AppContractException(
+                "search.sort_direction.invalid",
+                "Sort direction is invalid.",
+                nameof(sortDirection));
+        }
+
         Text = text ?? string.Empty;
         PageNumber = pageNumber;
         PageSize = pageSize;
@@ -105,6 +123,8 @@ public sealed record SearchPromptsQuery
         NeedsReviewOnly = needsReviewOnly;
         CreatedFromUtc = createdFromUtc;
         CreatedToUtc = createdToUtc;
+        SortColumn = sortColumn;
+        SortDirection = sortDirection;
     }
 
     public string Text { get; }
@@ -120,6 +140,25 @@ public sealed record SearchPromptsQuery
     public DateTimeOffset? CreatedFromUtc { get; }
 
     public DateTimeOffset? CreatedToUtc { get; }
+
+    public PromptSortColumn SortColumn { get; }
+
+    public PromptSortDirection SortDirection { get; }
+}
+
+public enum PromptSortColumn
+{
+    Intent,
+    Title,
+    Prompt,
+    Modified,
+    Copies,
+}
+
+public enum PromptSortDirection
+{
+    Ascending,
+    Descending,
 }
 
 public sealed record SearchPageDto<T>(

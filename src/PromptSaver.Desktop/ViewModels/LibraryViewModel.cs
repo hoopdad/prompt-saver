@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using PromptSaver.Application;
 using PromptSaver.Application.Dtos;
 using PromptSaver.Application.UseCases;
@@ -19,6 +20,10 @@ public sealed class LibraryViewModel : ViewModelBase
     private string _statusMessage = "Search your saved prompts";
     private PromptSummaryDto? _selectedPrompt;
     private int _pageNumber = 1;
+    private int _pageSize = 20;
+    private string _pageSizeText = "20";
+    private PromptSortColumn _sortColumn = PromptSortColumn.Intent;
+    private PromptSortDirection _sortDirection = PromptSortDirection.Ascending;
     private PromptSummaryDto? _moreOptionsPrompt;
     private bool _deleteConfirmationOpen;
     private FocusRequest? _focusRequest;
@@ -31,9 +36,16 @@ public sealed class LibraryViewModel : ViewModelBase
         _getPromptDetails = Require<IGetPromptDetails>(services);
         _duplicatePrompt = Require<IDuplicatePrompt>(services);
         _deletePrompt = Require<IDeletePrompt>(services);
-        SearchCommand = new AsyncDelegateCommand(SearchAsync);
+        SearchCommand = new AsyncDelegateCommand(SearchFromFirstPageAsync);
         ClearSearchCommand = new DelegateCommand(ClearSearchStage);
         ViewAllCommand = new AsyncDelegateCommand(ViewAllAsync);
+        ApplyPageSizeCommand = new AsyncDelegateCommand(ApplyPageSizeAsync);
+        PreviousPageCommand = new AsyncDelegateCommand(
+            PreviousPageAsync,
+            () => PageNumber > 1);
+        NextPageCommand = new AsyncDelegateCommand(
+            NextPageAsync,
+            () => PageNumber < PageCount);
         OpenPromptCommand = new ParameterizedCommand<PromptSummaryDto>(
             prompt => OpenPromptRequested?.Invoke(
                 this,
@@ -92,6 +104,48 @@ public sealed class LibraryViewModel : ViewModelBase
 
     public long TotalCount { get; private set; }
 
+    public int PageNumber
+    {
+        get => _pageNumber;
+        private set
+        {
+            if (SetProperty(ref _pageNumber, value))
+            {
+                OnPropertyChanged(nameof(PageStatus));
+                RaisePagingCommands();
+            }
+        }
+    }
+
+    public int PageSize
+    {
+        get => _pageSize;
+        private set => SetProperty(ref _pageSize, value);
+    }
+
+    public string PageSizeText
+    {
+        get => _pageSizeText;
+        set => SetProperty(ref _pageSizeText, value ?? string.Empty);
+    }
+
+    public int PageCount =>
+        Math.Max(1, checked((int)Math.Ceiling(TotalCount / (double)PageSize)));
+
+    public string PageStatus => $"Page {PageNumber:N0} of {PageCount:N0}";
+
+    public PromptSortColumn SortColumn
+    {
+        get => _sortColumn;
+        private set => SetProperty(ref _sortColumn, value);
+    }
+
+    public PromptSortDirection SortDirection
+    {
+        get => _sortDirection;
+        private set => SetProperty(ref _sortDirection, value);
+    }
+
     public PromptSummaryDto? MoreOptionsPrompt
     {
         get => _moreOptionsPrompt;
@@ -133,6 +187,12 @@ public sealed class LibraryViewModel : ViewModelBase
 
     public AsyncDelegateCommand ViewAllCommand { get; }
 
+    public AsyncDelegateCommand ApplyPageSizeCommand { get; }
+
+    public AsyncDelegateCommand PreviousPageCommand { get; }
+
+    public AsyncDelegateCommand NextPageCommand { get; }
+
     public ParameterizedCommand<PromptSummaryDto> OpenPromptCommand { get; }
 
     public AsyncParameterizedCommand<PromptSummaryDto> CopyPromptCommand { get; }
@@ -157,7 +217,13 @@ public sealed class LibraryViewModel : ViewModelBase
         try
         {
             var result = await _searchPrompts.ExecuteAsync(
-                new SearchPromptsQuery(SearchText, _pageNumber, 50, needsReviewOnly: NeedsReviewOnly),
+                new SearchPromptsQuery(
+                    SearchText,
+                    PageNumber,
+                    PageSize,
+                    needsReviewOnly: NeedsReviewOnly,
+                    sortColumn: SortColumn,
+                    sortDirection: SortDirection),
                 CancellationToken.None);
             Results.Clear();
             if (!result.IsSuccess)
@@ -175,12 +241,35 @@ public sealed class LibraryViewModel : ViewModelBase
 
             TotalCount = result.Value.TotalCount;
             OnPropertyChanged(nameof(TotalCount));
-            StatusMessage = TotalCount == 1 ? "1 result" : $"{TotalCount:N0} results";
+            OnPropertyChanged(nameof(PageCount));
+            OnPropertyChanged(nameof(PageStatus));
+            RaisePagingCommands();
+            StatusMessage = TotalCount == 1
+                ? $"1 result · {PageStatus}"
+                : $"{TotalCount:N0} results · {PageStatus}";
         }
         finally
         {
             IsSearching = false;
         }
+    }
+
+    public async Task SortAsync(PromptSortColumn column)
+    {
+        if (SortColumn == column)
+        {
+            SortDirection = SortDirection == PromptSortDirection.Ascending
+                ? PromptSortDirection.Descending
+                : PromptSortDirection.Ascending;
+        }
+        else
+        {
+            SortColumn = column;
+            SortDirection = PromptSortDirection.Ascending;
+        }
+
+        PageNumber = 1;
+        await SearchAsync();
     }
 
     public void ClearSearchStage()
@@ -201,7 +290,48 @@ public sealed class LibraryViewModel : ViewModelBase
     {
         SearchText = string.Empty;
         NeedsReviewOnly = false;
-        _pageNumber = 1;
+        PageNumber = 1;
+        await SearchAsync();
+        RequestFocus(FocusTarget.LibraryResults);
+    }
+
+    private async Task SearchFromFirstPageAsync()
+    {
+        PageNumber = 1;
+        await SearchAsync();
+    }
+
+    private async Task ApplyPageSizeAsync()
+    {
+        if (!int.TryParse(
+                PageSizeText,
+                NumberStyles.None,
+                CultureInfo.CurrentCulture,
+                out int pageSize) ||
+            pageSize is < 1 or > 200)
+        {
+            StatusMessage = "Rows per page must be a whole number from 1 to 200";
+            return;
+        }
+
+        PageSize = pageSize;
+        PageSizeText = pageSize.ToString(CultureInfo.CurrentCulture);
+        PageNumber = 1;
+        OnPropertyChanged(nameof(PageCount));
+        OnPropertyChanged(nameof(PageStatus));
+        await SearchAsync();
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        PageNumber--;
+        await SearchAsync();
+        RequestFocus(FocusTarget.LibraryResults);
+    }
+
+    private async Task NextPageAsync()
+    {
+        PageNumber++;
         await SearchAsync();
         RequestFocus(FocusTarget.LibraryResults);
     }
@@ -305,6 +435,12 @@ public sealed class LibraryViewModel : ViewModelBase
         DuplicatePromptCommand.RaiseCanExecuteChanged();
         RequestPermanentDeleteCommand.RaiseCanExecuteChanged();
         ConfirmPermanentDeleteCommand.RaiseCanExecuteChanged();
+    }
+
+    private void RaisePagingCommands()
+    {
+        PreviousPageCommand.RaiseCanExecuteChanged();
+        NextPageCommand.RaiseCanExecuteChanged();
     }
 
     private void RequestFocus(FocusTarget target) =>

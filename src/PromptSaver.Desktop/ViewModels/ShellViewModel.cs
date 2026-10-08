@@ -162,8 +162,9 @@ public sealed class ShellViewModel : ViewModelBase
         CurrentPageKind = ShellPage.Capture;
         RequestFocus(FocusTarget.PromptEditor);
         Task optionalWork = _optionalInitialization(cancellationToken);
+        Task libraryLoad = Library.SearchAsync();
         await Capture.InitializeAsync(cancellationToken);
-        await optionalWork;
+        await Task.WhenAll(optionalWork, libraryLoad);
     }
 
     public async Task ShowNewPromptAsync()

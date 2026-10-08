@@ -38,8 +38,9 @@ available before the database and optional provider discovery finish. Use:
 - Capture can save and open metadata editing in one action. LLM intent
   suggestions populate an editable intent field and can be saved directly,
   including replacing an Unsorted assignment.
-- Library `More options` exposes intent/metadata review, duplication, and
-  confirmed permanent deletion.
+- Library opens to all prompts, defaults to 20 rows per page sorted by intent,
+  supports user-sized pages and reversible column sorting, and exposes
+  intent/metadata review, duplication, and confirmed permanent deletion.
 
 All non-secret user data is stored under:
 

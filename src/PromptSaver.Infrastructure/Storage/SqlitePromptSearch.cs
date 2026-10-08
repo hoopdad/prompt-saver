@@ -410,6 +410,7 @@ public sealed class SqlitePromptSearch : IPromptSearch
     {
         List<PromptSummaryDto> results = [];
         await using SqliteCommand command = connection.CreateCommand();
+        string orderBy = GetOrderBy(query.SortColumn, query.SortDirection);
         command.CommandText = $"""
             SELECT
                 p.id, p.title, substr(p.body, 1, 500), p.updated_at_utc,
@@ -425,8 +426,7 @@ public sealed class SqlitePromptSearch : IPromptSearch
               AND ($createdFrom IS NULL OR p.created_at_utc >= $createdFrom)
               AND ($createdTo IS NULL OR p.created_at_utc < $createdTo)
               {(match is null ? string.Empty : "AND prompt_search_index MATCH $match")}
-            ORDER BY
-              {(match is null ? "p.updated_at_utc DESC, p.id" : "bm25(prompt_search_index), p.updated_at_utc DESC, p.id")}
+            ORDER BY {orderBy}, p.id
             LIMIT $limit OFFSET $offset;
             """;
         BindSearch(command, query, match);
@@ -460,6 +460,28 @@ public sealed class SqlitePromptSearch : IPromptSearch
         }
 
         return results;
+    }
+
+    private static string GetOrderBy(
+        PromptSortColumn sortColumn,
+        PromptSortDirection sortDirection)
+    {
+        string expression = sortColumn switch
+        {
+            PromptSortColumn.Intent => "i.canonical_name COLLATE NOCASE",
+            PromptSortColumn.Title => "COALESCE(p.title, '') COLLATE NOCASE",
+            PromptSortColumn.Prompt => "p.body COLLATE NOCASE",
+            PromptSortColumn.Modified => "p.updated_at_utc",
+            PromptSortColumn.Copies => "p.copy_count",
+            _ => throw new ArgumentOutOfRangeException(nameof(sortColumn)),
+        };
+        string direction = sortDirection switch
+        {
+            PromptSortDirection.Ascending => "ASC",
+            PromptSortDirection.Descending => "DESC",
+            _ => throw new ArgumentOutOfRangeException(nameof(sortDirection)),
+        };
+        return $"{expression} {direction}";
     }
 
     private static void BindSearch(

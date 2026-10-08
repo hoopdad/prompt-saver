@@ -60,6 +60,15 @@ public sealed class ApplicationContractTests
     }
 
     [Fact]
+    public void SearchDefaultsToIntentAscending()
+    {
+        SearchPromptsQuery query = new("text", pageNumber: 1, pageSize: 20);
+
+        Assert.Equal(PromptSortColumn.Intent, query.SortColumn);
+        Assert.Equal(PromptSortDirection.Ascending, query.SortDirection);
+    }
+
+    [Fact]
     public void CaptureCommandPreservesBodyUntilDomainValidation()
     {
         const string body = "  exact\r\ntext  ";

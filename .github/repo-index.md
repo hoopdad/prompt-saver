@@ -160,6 +160,14 @@ user data root.
   `src/PromptSaver.Desktop/ViewModels/ShellViewModel.cs`,
   `src/PromptSaver.Desktop/Views`,
   `tests/PromptSaver.Desktop.Tests/ViewModels/ShellViewModelTests.cs`
+- Change Library default loading, page size, pagination, sortable columns, or
+  one-line result presentation:
+  `src/PromptSaver.Application/Dtos/DraftSearchDtos.cs`,
+  `src/PromptSaver.Infrastructure/Storage/SqlitePromptSearch.cs`,
+  `src/PromptSaver.Desktop/ViewModels/{Library,Shell}ViewModel.cs`,
+  `src/PromptSaver.Desktop/Views/LibraryView.xaml`,
+  `tests/PromptSaver.Infrastructure.Tests/PersistenceIntegrationTests.cs`,
+  `tests/PromptSaver.Desktop.Tests/ViewModels/LibraryViewModelTests.cs`
 - Change restart-level save/search/copy behavior or typed integration failures:
   `tests/PromptSaver.Infrastructure.Tests/ApplicationIntegrationTests.cs`
 - Change CI or publish validation: `.github/workflows/ci.yml`,
@@ -205,10 +213,9 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `b4ce1a1`; current work adds schema-constrained provider
-  responses, strict typed metadata validation, commentary JSON recovery,
-  bounded invalid-response diagnostics, a shared New Prompt reset path,
-  versioned window titles, and release version 0.1.15.
+- Based on commit `f8f276f`; current work adds Library startup loading,
+  server-side reversible column sorting, configurable pagination with a
+  20-row default, one-line prompt rows, and release version 0.1.16.
 - Current UI/provider reliability changes considered: compact top navigation
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, a fixed application status bar,

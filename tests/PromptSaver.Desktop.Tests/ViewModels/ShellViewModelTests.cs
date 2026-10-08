@@ -23,6 +23,7 @@ public sealed class ShellViewModelTests
         Assert.False(startup.IsCompleted);
         initialization.SetResult();
         await startup;
+        Assert.Equal("0 results · Page 1 of 1", shell.Library.StatusMessage);
     }
 
     [Fact]
