@@ -31,6 +31,8 @@ available before the database and optional provider discovery finish. Use:
   repair, intent merge/reclassification, and diagnostics.
 - Settings reloads the saved provider model and shows save, connection, and
   LLM activity in the fixed status bar at the bottom of the window.
+- Light and dark modes apply a shared global palette to page surfaces, text,
+  inputs, lists, popup items, and Library table headers, rows, and selections.
 - Provider requests use native JSON response constraints where supported and
   validate replies against a strict typed metadata contract. Response handling
   recovers valid JSON from Markdown fences or surrounding commentary; rejected

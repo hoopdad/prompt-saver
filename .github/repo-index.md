@@ -213,9 +213,10 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `f8f276f`; current work adds Library startup loading,
-  server-side reversible column sorting, configurable pagination with a
-  20-row default, one-line prompt rows, and release version 0.1.16.
+- Based on commit `78c9a5a`; current work extends the shared light/dark palette
+  to WPF system colors, global typography, popup/list selection states, and
+  Library table headers, rows, cells, and alternating backgrounds for release
+  version 0.1.17.
 - Current UI/provider reliability changes considered: compact top navigation
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, a fixed application status bar,

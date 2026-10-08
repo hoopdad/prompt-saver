@@ -90,9 +90,20 @@ public partial class MainWindow : Window
         SetBrush("AccentHoverBrush", dark ? "#3B82F6" : "#1D4ED8");
         SetBrush("AccentPressedBrush", dark ? "#93C5FD" : "#1E40AF");
         SetBrush("SelectionBrush", dark ? "#243B67" : "#E8EFFF");
+        SetBrush(SystemColors.WindowBrushKey, dark ? "#111827" : "#FFFFFF");
+        SetBrush(SystemColors.WindowTextBrushKey, dark ? "#F8FAFC" : "#172033");
+        SetBrush(SystemColors.ControlBrushKey, dark ? "#111827" : "#FFFFFF");
+        SetBrush(SystemColors.ControlTextBrushKey, dark ? "#F8FAFC" : "#172033");
+        SetBrush(SystemColors.HighlightBrushKey, dark ? "#243B67" : "#E8EFFF");
+        SetBrush(SystemColors.HighlightTextBrushKey, dark ? "#F8FAFC" : "#172033");
+        SetBrush(SystemColors.GrayTextBrushKey, dark ? "#AAB5C5" : "#667085");
+        SetBrush(SystemColors.ActiveBorderBrushKey, dark ? "#334155" : "#D8DEE9");
     }
 
     private static void SetBrush(string key, string color) =>
+        SetBrush((object)key, color);
+
+    private static void SetBrush(object key, string color) =>
         System.Windows.Application.Current.Resources[key] =
             new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
 
