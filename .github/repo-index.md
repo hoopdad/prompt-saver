@@ -74,6 +74,10 @@
   `scripts/Invoke-LocalCi.ps1`, `.github/workflows/ci.yml`,
   `.github/workflows/release-windows.yml`
 - Windows packaging behavior and operations: `docs/windows-packaging.md`
+- End-user installation, architecture selection, unsigned-release warnings,
+  checksum verification, and data retention: `README.md`
+- Release contents, executed checks, and qualification limitations:
+  `CHANGELOG.md`
 
 ## Technical layers
 
@@ -182,6 +186,10 @@ user data root.
   `scripts/New-WindowsPackageManifest.ps1`,
   `scripts/Sign-WindowsArtifacts.ps1`,
   `tests/PromptSaver.Package.Tests`, `docs/windows-packaging.md`
+- Prepare a release: set `src/PromptSaver.Desktop/PromptSaver.Desktop.csproj`
+  `VersionPrefix`, synchronize the installer/workflow version defaults, run
+  `scripts/Invoke-LocalCi.ps1 -IncludePackages -RuntimeIdentifier all`, and
+  publish only the selected version's MSIs/SPDX manifests plus `SHA256SUMS.txt`.
 
 ## Conventions and tests
 
@@ -213,10 +221,17 @@ architectures without accepting new terms; see `docs/windows-packaging.md`.
 
 ## Freshness
 
-- Based on commit `78c9a5a`; current work extends the shared light/dark palette
-  to WPF system colors, global typography, popup/list selection states, and
-  Library table headers, rows, cells, and alternating backgrounds for release
-  version 0.1.17.
+- Based on commit `bba3e43` plus 1.0.0 release preparation. Added
+  `CHANGELOG.md`; no source paths added or deleted. Release changes include version defaults, package-version
+  validation, application/MSI version and bundled-runtime checks, selected
+  release asset uploads, signed-workflow quality gates, and
+  installation/qualification documentation.
+- Local packages are unsigned unless the protected signing workflow is used.
+  No signing environment or repository signing secrets were configured at
+  release preparation. UI automation and dedicated-hardware performance
+  projects are skipped placeholders; machine-wide lifecycle tests are manual
+  qualification, not part of routine CI.
+- Existing implementation history (the additions below are now committed):
 - Current UI/provider reliability changes considered: compact top navigation
   with an immediate light/dark toggle, shared modern card/control resources,
   top-profile capture/provider actions, a fixed application status bar,

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <InstallerPlatform Condition="'$(InstallerPlatform)' == ''">x64</InstallerPlatform>
     <Platform>$(InstallerPlatform)</Platform>
-    <ProductVersion Condition="'$(ProductVersion)' == ''">0.1.0</ProductVersion>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0</ProductVersion>
     <RuntimeIdentifier Condition="'$(InstallerPlatform)' == 'x64'">win-x64</RuntimeIdentifier>
     <RuntimeIdentifier Condition="'$(InstallerPlatform)' == 'arm64'">win-arm64</RuntimeIdentifier>
     <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\..\artifacts\publish\$(RuntimeIdentifier)</PublishDir>

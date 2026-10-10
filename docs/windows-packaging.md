@@ -20,7 +20,7 @@ shortcuts.
 From a Windows x64 or ARM64 development machine with the pinned .NET SDK:
 
 ```powershell
-.\scripts\Build-WindowsPackages.ps1 -RuntimeIdentifier all -Version 0.1.0
+.\scripts\Build-WindowsPackages.ps1 -RuntimeIdentifier all -Version 1.0.0
 ```
 
 Outputs:
@@ -28,12 +28,16 @@ Outputs:
 ```text
 artifacts\publish\win-x64\
 artifacts\publish\win-arm64\
-artifacts\installers\win-x64\PromptSaver-0.1.0-win-x64.msi
-artifacts\installers\win-arm64\PromptSaver-0.1.0-win-arm64.msi
+artifacts\installers\win-x64\PromptSaver-1.0.0-win-x64.msi
+artifacts\installers\win-arm64\PromptSaver-1.0.0-win-arm64.msi
 artifacts\manifests\SHA256SUMS.txt
-artifacts\manifests\PromptSaver-0.1.0-win-x64.spdx.json
-artifacts\manifests\PromptSaver-0.1.0-win-arm64.spdx.json
+artifacts\manifests\PromptSaver-1.0.0-win-x64.spdx.json
+artifacts\manifests\PromptSaver-1.0.0-win-arm64.spdx.json
 ```
+
+Without `-Version`, the package script uses the desktop project's
+`VersionPrefix`. An explicit version must fit Windows Installer's
+three-part version limits (255.255.65535).
 
 If a developer is running Prompt Saver directly from a publish directory, the
 script does not stop that process or overwrite its loaded files. It writes the
@@ -48,6 +52,22 @@ architecture, upgrade and launch-condition tables, shortcuts, absence of
 product machine-wide.
 
 ## Install behavior
+
+Download the matching MSI from the
+[1.0.0 release](https://github.com/hoopdad/prompt-saver/releases/tag/v1.0.0).
+The 1.0.0 assets are unsigned; verify the release's `SHA256SUMS.txt` and follow
+your organization's policy for unknown publishers. See the README for
+interactive installation and architecture selection.
+
+For a managed installation from an elevated PowerShell session:
+
+```powershell
+msiexec.exe /i .\PromptSaver-1.0.0-win-arm64.msi /qn /norestart /L*v .\PromptSaver-install.log
+```
+
+Use the x64 filename on Intel/AMD Windows. Windows Installer exit code `0`
+means success; `3010` means success with a restart required. This command
+actually installs machine-wide, unlike the administrative extraction tests.
 
 - The packages are per-machine and require elevation when actually installed.
 - Same-architecture major upgrades are automatic.
@@ -106,3 +126,25 @@ The workflow signs published PE files, rebuilds the MSIs from signed inputs,
 signs and verifies each MSI, regenerates checksums/SBOMs, runs package tests,
 and publishes tag assets. No certificate material is written to the
 repository.
+
+## Release qualification
+
+Run the complete automated local gate before publishing:
+
+```powershell
+.\scripts\Invoke-LocalCi.ps1 -IncludePackages -RuntimeIdentifier all -Version 1.0.0
+```
+
+This runs locked restore, formatting verification, a warnings-as-errors
+Release build, Domain/Application/Infrastructure/Desktop tests, both native
+publishes, and MSI metadata/extraction tests. Package tests also check that
+the application file version matches the installer and the .NET runtime is
+included. SHA-256 checksums must be checked again after downloading release
+assets.
+
+The UI automation and dedicated-hardware performance projects currently
+contain skipped placeholders, not completed qualification. Automated package
+inspection does not prove interactive install/repair/upgrade/uninstall,
+screen-reader behavior, or startup performance. Record those untested areas
+in release notes rather than claiming that they passed. Do not install or
+uninstall machine-wide as part of routine local CI.

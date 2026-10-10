@@ -6,7 +6,7 @@ on:
       version:
         description: SemVer package version
         required: true
-        default: 0.1.0
+        default: 1.0.0
   push:
     tags:
       - 'v*'
@@ -37,6 +37,9 @@ jobs:
             throw "Version must be three-part SemVer for MSI: $version"
           }
           "value=$version" >> $env:GITHUB_OUTPUT
+      - name: Run release quality checks
+        shell: pwsh
+        run: .\scripts\Invoke-LocalCi.ps1
       - name: Build unsigned inputs
         shell: pwsh
         run: .\scripts\Build-WindowsPackages.ps1 -RuntimeIdentifier all -Version '${{ steps.version.outputs.value }}' -SkipPackageTests
@@ -102,6 +105,10 @@ jobs:
           }
           $assets = @(
             Get-ChildItem .\artifacts\installers -Filter *.msi -File -Recurse
-            Get-ChildItem .\artifacts\manifests -File
+            Get-Item .\artifacts\manifests\SHA256SUMS.txt
+            Get-ChildItem .\artifacts\manifests -Filter 'PromptSaver-${{ steps.version.outputs.value }}-*.spdx.json' -File
           ) | ForEach-Object FullName
           gh release upload '${{ github.ref_name }}' $assets --clobber
+          if ($LASTEXITCODE -ne 0) {
+            throw 'GitHub release asset upload failed.'
+          }

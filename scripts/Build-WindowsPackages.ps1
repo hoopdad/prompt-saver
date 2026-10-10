@@ -3,7 +3,7 @@ param(
     [ValidateSet("all", "win-x64", "win-arm64")]
     [string] $RuntimeIdentifier = "all",
 
-    [string] $Version = "0.1.0",
+    [string] $Version,
 
     [switch] $SkipPublish,
 
@@ -14,6 +14,19 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $artifactsRoot = Join-Path $repositoryRoot "artifacts"
 $rids = if ($RuntimeIdentifier -eq "all") { @("win-x64", "win-arm64") } else { @($RuntimeIdentifier) }
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    [xml] $desktopProject = Get-Content `
+        (Join-Path $repositoryRoot "src\PromptSaver.Desktop\PromptSaver.Desktop.csproj")
+    $Version = [string]$desktopProject.Project.PropertyGroup.VersionPrefix
+}
+if ($Version -notmatch '^\d+\.\d+\.\d+$') {
+    throw "Version must be three-part SemVer for MSI: $Version"
+}
+$versionParts = $Version.Split('.') | ForEach-Object { [int]$_ }
+if ($versionParts[0] -gt 255 -or $versionParts[1] -gt 255 -or $versionParts[2] -gt 65535) {
+    throw "Version exceeds Windows Installer limits (255.255.65535): $Version"
+}
 
 function Reset-OutputDirectory {
     param([Parameter(Mandatory)][string] $Path)

@@ -6,6 +6,45 @@ organizing, searching, editing, and copying reusable AI prompts. It uses WPF on
 intent derivation, and optional Ollama or OpenAI-compatible metadata
 enrichment.
 
+## Install 1.0.0
+
+Download the MSI for your processor from the
+[1.0.0 release](https://github.com/hoopdad/prompt-saver/releases/tag/v1.0.0):
+
+| Windows processor | Installer |
+| --- | --- |
+| Intel or AMD (x64) | [PromptSaver-1.0.0-win-x64.msi](https://github.com/hoopdad/prompt-saver/releases/download/v1.0.0/PromptSaver-1.0.0-win-x64.msi) |
+| ARM64 (including Snapdragon) | [PromptSaver-1.0.0-win-arm64.msi](https://github.com/hoopdad/prompt-saver/releases/download/v1.0.0/PromptSaver-1.0.0-win-arm64.msi) |
+
+Find your processor under **Settings > System > About > System type**.
+Windows 10 or later is required; no separate .NET installation is needed.
+Close Prompt Saver, double-click the matching MSI, and approve the Windows
+administrator prompt if you choose to install. Launch **Prompt Saver** from
+the Start menu afterward.
+
+**The 1.0.0 installers are unsigned.** Windows may display an unknown-publisher
+or SmartScreen warning. There is no verified publisher identity; do not bypass
+a security warning unless your organization's policy allows installation and
+you trust the release source. SHA-256 checksums and per-architecture SPDX file
+manifests are attached to the release. To check a download:
+
+```powershell
+Get-FileHash .\PromptSaver-1.0.0-win-arm64.msi -Algorithm SHA256
+```
+
+Compare the hash with the corresponding entry in the downloaded
+`SHA256SUMS.txt` (use the x64 filename for x64). Checksums detect changed
+downloads; they are not a substitute for code signing.
+
+See [CHANGELOG.md](CHANGELOG.md) for release contents, verification results,
+and qualification limitations.
+
+Same-architecture upgrades retain your prompts and settings. To switch
+architecture, uninstall the old package first. Uninstall through Windows
+**Settings > Apps**; uninstalling does not delete your local data or saved
+provider credentials. Remove provider keys in the application's Settings
+before uninstalling if you no longer want them stored.
+
 ## Use the application
 
 Requirements:
@@ -93,7 +132,8 @@ Include both Windows packages and package validation when needed:
 ```
 
 The routine GitHub Actions CI workflow is manual-only. The protected release
-workflow remains available for signed release artifacts.
+workflow remains available for signed release artifacts once signing secrets
+are configured; 1.0.0 is built and published locally without signing.
 
 Publish native self-contained builds:
 
@@ -109,7 +149,7 @@ Architecture and product decisions are documented in `docs/system-design.md`,
 unsigned local MSIs, checksums, SPDX manifests, and run package validation with:
 
 ```powershell
-.\scripts\Build-WindowsPackages.ps1 -RuntimeIdentifier all -Version 0.1.0
+.\scripts\Build-WindowsPackages.ps1 -RuntimeIdentifier all -Version 1.0.0
 ```
 
 The installers never modify `PATH` or remove

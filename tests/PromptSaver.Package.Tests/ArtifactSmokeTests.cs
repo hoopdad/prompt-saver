@@ -46,6 +46,22 @@ public sealed class ArtifactSmokeTests
     [Theory]
     [MemberData(nameof(Architectures))]
     [Trait("Category", "Artifact")]
+    public void PublishedApplicationVersionMatchesInstaller(string rid, ushort _, string expectedTemplate)
+    {
+        ArtifactSet artifacts = ArtifactSet.Require(rid);
+        using var database = new InstallerDatabase(artifacts.Installer);
+        FileVersionInfo version = FileVersionInfo.GetVersionInfo(artifacts.ManagedDesktopAssembly);
+
+        Assert.NotEmpty(expectedTemplate);
+        Assert.Equal(
+            database.Property("ProductVersion"),
+            $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}");
+        Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(artifacts.Executable)!, "coreclr.dll")));
+    }
+
+    [Theory]
+    [MemberData(nameof(Architectures))]
+    [Trait("Category", "Artifact")]
     public void InstallerMetadataMatchesArchitecture(string rid, ushort _, string expectedTemplate)
     {
         ArtifactSet artifacts = ArtifactSet.Require(rid);
@@ -53,7 +69,7 @@ public sealed class ArtifactSmokeTests
 
         Assert.Equal("Prompt Saver", database.Property("ProductName"));
         Assert.Equal(
-            Environment.GetEnvironmentVariable("PROMPTSAVER_PACKAGE_VERSION") ?? "0.1.0",
+            Environment.GetEnvironmentVariable("PROMPTSAVER_PACKAGE_VERSION") ?? "1.0.0",
             database.Property("ProductVersion"));
         Assert.Equal(
             rid == "win-x64"
